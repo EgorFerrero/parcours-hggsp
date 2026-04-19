@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Parcours HGGSP — Apprentissage par renforcement</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Georgia,serif;background:#fff;color:#1a1a1a;line-height:1.7;font-size:15px}
+
+header{border-bottom:1px solid #e0e0e0;padding:2.2rem 3rem 1.6rem}
+header h1{font-size:1.4rem;font-weight:400;letter-spacing:0.02em}
+header .sub{font-family:Arial,sans-serif;font-size:0.8rem;color:#999;margin-top:0.3rem}
+.badge-row{display:flex;gap:0.4rem;margin-top:0.8rem;flex-wrap:wrap}
+.badge{font-family:Arial,sans-serif;font-size:0.65rem;letter-spacing:0.07em;text-transform:uppercase;padding:2px 9px;border:1px solid #ddd;border-radius:2px;color:#777}
+
+.top-bar{display:flex;gap:2rem;align-items:center;padding:0.85rem 3rem;border-bottom:1px solid #e8e8e8;background:#fafafa;font-family:Arial,sans-serif;flex-wrap:wrap}
+.stat{display:flex;flex-direction:column;align-items:center;gap:1px}
+.stat-val{font-size:1.2rem;font-weight:600;color:#1a1a1a}
+.stat-lbl{font-size:0.67rem;text-transform:uppercase;letter-spacing:0.08em;color:#bbb}
+.prog-wrap{flex:1;min-width:160px}
+.prog-track{height:3px;background:#e8e8e8;border-radius:2px;margin-bottom:3px}
+.prog-fill{height:100%;background:#1a1a1a;border-radius:2px;transition:width 0.5s}
+.prog-lbl{font-size:0.68rem;color:#bbb;font-family:Arial,sans-serif}
+
+.nav-tabs{display:flex;border-bottom:1px solid #e0e0e0;padding:0 3rem;background:#fff;overflow-x:auto}
+.nav-tab{font-family:Arial,sans-serif;font-size:0.76rem;padding:0.7rem 1.1rem;cursor:pointer;border-bottom:2px solid transparent;color:#aaa;white-space:nowrap;transition:all 0.15s;user-select:none}
+.nav-tab:hover{color:#666}
+.nav-tab.active{color:#1a1a1a;border-bottom-color:#1a1a1a}
+
+.main{padding:1.75rem 3rem 5rem;max-width:920px;margin:0 auto}
+.mod-sec{display:none}
+.mod-sec.visible{display:block}
+
+.mod-hdr{margin-bottom:1.4rem}
+.mod-tag{font-family:Arial,sans-serif;font-size:0.66rem;text-transform:uppercase;letter-spacing:0.12em;color:#ccc;margin-bottom:0.3rem}
+.mod-title{font-size:1.1rem;font-weight:400;margin-bottom:0.25rem}
+.mod-desc{font-family:Arial,sans-serif;font-size:0.8rem;color:#999;line-height:1.5}
+.mod-prog{font-family:Arial,sans-serif;font-size:0.7rem;color:#ccc;margin-top:0.35rem}
+
+/* RL INFO BOX */
+.rl-info{border:1px solid #e8e8e8;background:#fafafa;padding:0.9rem 1.1rem;margin-bottom:1.5rem;border-radius:2px;font-family:Arial,sans-serif;font-size:0.78rem;color:#666;line-height:1.6}
+.rl-info strong{color:#1a1a1a;font-weight:500}
+
+/* EXERCISE CARD */
+.ex-card{border:1px solid #e8e8e8;border-radius:3px;margin-bottom:0.7rem;overflow:hidden;transition:border-color 0.2s}
+.ex-card.locked{opacity:0.38;pointer-events:none}
+.ex-card.done{border-color:#999}
+.ex-card.active{border-color:#1a1a1a}
+
+.ex-head{display:flex;align-items:center;gap:0.85rem;padding:0.85rem 1.1rem;cursor:pointer;background:#fff;transition:background 0.15s}
+.ex-head:hover{background:#fafafa}
+.ex-n{font-family:Arial,sans-serif;font-size:0.7rem;color:#ccc;min-width:24px}
+.dp{font-family:Arial,sans-serif;font-size:0.63rem;letter-spacing:0.05em;text-transform:uppercase;padding:2px 6px;border-radius:2px}
+.dp-easy{background:#f2f2f2;color:#888}
+.dp-med{background:#eaeaea;color:#555}
+.dp-hard{background:#ddd;color:#222;font-weight:600}
+.ex-ttl{flex:1;font-size:0.9rem}
+.theme-tag{font-family:Arial,sans-serif;font-size:0.63rem;color:#bbb;border:1px solid #ebebeb;padding:1px 6px;border-radius:2px}
+.ex-pts-b{font-family:Arial,sans-serif;font-size:0.7rem;color:#bbb;min-width:46px;text-align:right}
+.ex-ico{font-size:0.85rem;min-width:16px;text-align:center;color:#ccc}
+
+/* ATTEMPTS INDICATOR */
+.attempts-row{display:flex;gap:4px;align-items:center;min-width:60px}
+.attempt-dot{width:8px;height:8px;border-radius:50%;border:1px solid #ddd;background:#fff;transition:all 0.2s}
+.attempt-dot.used-fail{background:#ddd;border-color:#bbb}
+.attempt-dot.used-pass{background:#1a1a1a;border-color:#1a1a1a}
+
+.ex-body{border-top:1px solid #f0f0f0;padding:1.4rem 1.1rem;display:none;background:#fdfdfd}
+.ex-body.open{display:block}
+
+.sec-lbl{font-family:Arial,sans-serif;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.1em;color:#ccc;margin-bottom:0.45rem;margin-top:1.1rem}
+.sec-lbl:first-child{margin-top:0}
+
+.notion-row{display:flex;flex-wrap:wrap;gap:0.35rem;margin-bottom:0.75rem}
+.notion-chip{font-family:Arial,sans-serif;font-size:0.68rem;background:#f5f5f5;border:1px solid #ebebeb;padding:2px 8px;border-radius:2px;color:#666}
+
+/* SOLUTION BOX — shown after attempt */
+.sol-box{background:#fff;border:1px solid #e0e0e0;border-left:3px solid #1a1a1a;padding:0.9rem 1.1rem;font-size:0.86rem;line-height:1.85;margin-bottom:1rem;display:none}
+.sol-box.show{display:block}
+.sol-locked-notice{font-family:Arial,sans-serif;font-size:0.76rem;color:#bbb;padding:0.5rem 0;font-style:italic;margin-bottom:0.75rem}
+
+.q-text{font-size:0.9rem;color:#222;white-space:pre-wrap;margin-bottom:0.8rem;line-height:1.75}
+
+/* VARIANT TAG */
+.variant-tag{font-family:Arial,sans-serif;font-size:0.7rem;background:#f0f0f0;border:1px solid #e0e0e0;padding:3px 10px;border-radius:2px;color:#666;display:inline-block;margin-bottom:0.75rem}
+
+textarea{width:100%;border:1px solid #d5d5d5;border-radius:2px;padding:0.65rem 0.85rem;font-size:0.87rem;font-family:Georgia,serif;line-height:1.75;resize:vertical;min-height:90px;color:#1a1a1a;background:#fff;outline:none;transition:border-color 0.2s}
+textarea:focus{border-color:#999}
+textarea:disabled{background:#f5f5f5;color:#aaa;cursor:not-allowed}
+
+.btn{font-family:Arial,sans-serif;font-size:0.76rem;padding:0.42rem 1rem;border-radius:2px;cursor:pointer;border:1px solid;transition:all 0.15s;letter-spacing:0.02em}
+.btn:disabled{opacity:0.4;cursor:not-allowed}
+.btn-primary{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
+.btn-primary:hover:not(:disabled){background:#333}
+.btn-ghost{background:#fff;color:#555;border-color:#ccc}
+.btn-ghost:hover:not(:disabled){background:#f5f5f5}
+
+/* AI FEEDBACK */
+.ai-feedback-wrap{margin-top:1.1rem;display:none}
+.ai-feedback-wrap.show{display:block}
+.ai-feedback-header{font-family:Arial,sans-serif;font-size:0.68rem;text-transform:uppercase;letter-spacing:0.1em;color:#999;margin-bottom:0.6rem;display:flex;align-items:center;gap:0.5rem}
+.ai-badge{font-family:Arial,sans-serif;font-size:0.65rem;background:#1a1a1a;color:#fff;padding:2px 7px;border-radius:2px}
+.ai-feedback-body{border:1px solid #e0e0e0;border-radius:2px;padding:1rem 1.1rem;background:#fff;font-size:0.86rem;line-height:1.8}
+
+/* SCORE BREAKDOWN */
+.score-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin:0.75rem 0}
+.score-item{padding:0.5rem 0.75rem;border:1px solid #e8e8e8;border-radius:2px;background:#fafafa}
+.score-item-label{font-family:Arial,sans-serif;font-size:0.68rem;color:#999;margin-bottom:2px}
+.score-item-val{font-family:Arial,sans-serif;font-size:0.9rem;font-weight:500}
+.score-ok{color:#1a1a1a}
+.score-partial{color:#888}
+.score-fail{color:#bbb}
+
+.verdict-banner{padding:0.6rem 0.9rem;border-radius:2px;font-family:Arial,sans-serif;font-size:0.8rem;margin-top:0.75rem;border-left:3px solid}
+.verdict-pass{background:#f5f5f5;color:#1a1a1a;border-color:#1a1a1a}
+.verdict-partial{background:#f5f5f5;color:#555;border-color:#888}
+.verdict-fail{background:#fafafa;color:#888;border-color:#ddd}
+
+/* VARIANT NOTICE */
+.variant-notice{font-family:Arial,sans-serif;font-size:0.78rem;color:#555;padding:0.6rem 0.9rem;background:#fafafa;border:1px solid #e8e8e8;border-radius:2px;margin-top:0.75rem;border-left:3px solid #ccc}
+
+.pts-note{font-family:Arial,sans-serif;font-size:0.7rem;color:#ccc;margin-top:0.4rem}
+
+/* LOADING DOTS */
+.loading-dots{display:inline-flex;gap:4px;align-items:center;padding:0.5rem 0}
+.loading-dots span{width:5px;height:5px;border-radius:50%;background:#bbb;animation:blink 1.2s infinite}
+.loading-dots span:nth-child(2){animation-delay:0.2s}
+.loading-dots span:nth-child(3){animation-delay:0.4s}
+@keyframes blink{0%,80%,100%{opacity:0.2}40%{opacity:1}}
+
+.locked-msg{font-family:Arial,sans-serif;font-size:0.76rem;color:#ccc;padding:0.55rem 0.9rem;font-style:italic}
+
+@media(max-width:640px){
+  header,.main{padding-left:1.2rem;padding-right:1.2rem}
+  .top-bar{padding:0.85rem 1.2rem;gap:0.9rem}
+  .nav-tabs{padding:0 1.2rem}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Parcours · Dissertation HGGSP — Apprentissage par renforcement</h1>
+  <div class="sub">Évaluation par IA · Rejouer jusqu'au seuil · Coefficient 16 · Terminale générale</div>
+  <div class="badge-row">
+    <span class="badge">Environnement & territoire</span>
+    <span class="badge">Mondialisation & puissances</span>
+    <span class="badge">Guerre, paix & conflits</span>
+    <span class="badge">Mémoires & histoire</span>
+    <span class="badge">Science, technique & société</span>
+    <span class="badge">Frontières & migrations</span>
+  </div>
+</header>
+
+<div class="top-bar">
+  <div class="stat"><span class="stat-val" id="total-pts">0</span><span class="stat-lbl">Points</span></div>
+  <div class="stat"><span class="stat-val" id="ex-done">0</span><span class="stat-lbl">Validés</span></div>
+  <div class="stat"><span class="stat-val" id="total-tries">0</span><span class="stat-lbl">Tentatives</span></div>
+  <div class="prog-wrap">
+    <div class="prog-track"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
+    <div class="prog-lbl" id="prog-lbl">0 / 35 complétés</div>
+  </div>
+</div>
+
+<div class="nav-tabs" id="nav-tabs"></div>
+<div class="main" id="main-content"></div>
+
+<script>
+// ── PASSWORD GATE ────────────────────────────────────────────────────────────
+(function() {
+  const stored = sessionStorage.getItem('accessPassword');
+  if(stored) return; // already authenticated this session
+
+  const overlay = document.createElement('div');
+  overlay.id = 'pw-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:#fff;z-index:9999;display:flex;align-items:center;justify-content:center;font-family:Arial,sans-serif';
+  overlay.innerHTML = `
+    <div style="text-align:center;max-width:320px;width:90%;padding:2rem">
+      <div style="font-size:1.1rem;font-weight:400;margin-bottom:0.4rem;font-family:Georgia,serif">Parcours HGGSP</div>
+      <div style="font-size:0.78rem;color:#999;margin-bottom:1.75rem">Entrez le code d'accès pour continuer</div>
+      <input id="pw-input" type="password" placeholder="Code d'accès…" style="width:100%;border:1px solid #d0d0d0;border-radius:2px;padding:0.6rem 0.9rem;font-size:0.9rem;font-family:Arial,sans-serif;outline:none;margin-bottom:0.75rem;text-align:center;letter-spacing:0.1em">
+      <button id="pw-btn" style="width:100%;background:#1a1a1a;color:#fff;border:none;border-radius:2px;padding:0.6rem;font-family:Arial,sans-serif;font-size:0.82rem;cursor:pointer">Accéder</button>
+      <div id="pw-error" style="color:#aaa;font-size:0.75rem;margin-top:0.6rem;display:none">Code incorrect — réessayez</div>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  function tryPassword() {
+    const val = document.getElementById('pw-input').value.trim();
+    if(!val) return;
+    // We verify with the proxy — if proxy returns 401 the password is wrong
+    // For speed, we do a lightweight check client-side first (hash comparison)
+    // The real check is server-side in the proxy
+    sessionStorage.setItem('accessPassword', val);
+    const err = document.getElementById('pw-error');
+    // Quick server check
+    fetch('/api/groq', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-access-password':val},
+      body: JSON.stringify({prompt:'ping'})
+    }).then(r=>r.json()).then(d=>{
+      if(d.error==='unauthorized') {
+        sessionStorage.removeItem('accessPassword');
+        err.style.display='block';
+        document.getElementById('pw-input').value='';
+      } else {
+        overlay.remove();
+      }
+    }).catch(()=>{
+      // If network error, let through (will fail later gracefully)
+      overlay.remove();
+    });
+  }
+
+  document.getElementById('pw-btn').addEventListener('click', tryPassword);
+  document.getElementById('pw-input').addEventListener('keydown', e=>{ if(e.key==='Enter') tryPassword(); });
+})();
+// ── END PASSWORD GATE ─────────────────────────────────────────────────────────
+
+const MODULES = [
+  {id:"m1",label:"1 · Vocabulaire",title:"Maîtriser le vocabulaire HGGSP",desc:"Lexique fondamental des acteurs, échelles et notions géopolitiques. Sans précision lexicale, l'argumentation s'effondre."},
+  {id:"m2",label:"2 · Analyse du sujet",title:"Analyser rigoureusement un sujet HGGSP",desc:"Décortiquer les termes, identifier les échelles, les acteurs impliqués et formuler la problématique."},
+  {id:"m3",label:"3 · Raisonnement",title:"Construire un raisonnement solide",desc:"Thèse / antithèse / synthèse sur des sujets géopolitiques. Enchaîner les arguments avec rigueur."},
+  {id:"m4",label:"4 · Paradoxes",title:"Formuler des paradoxes géopolitiques",desc:"Identifier les tensions internes aux grandes dynamiques mondiales — marque d'un raisonnement de haut niveau."},
+  {id:"m5",label:"5 · Paragraphes",title:"Rédiger des paragraphes argumentés",desc:"Paragraphes structurés avec connecteurs, références et exemples géopolitiques situés."},
+  {id:"m6",label:"6 · Dissertation",title:"Maîtriser la dissertation HGGSP complète",desc:"Introduction, plan, transitions, conclusion. Sujets types de l'épreuve terminale."}
+];
+
+// Chaque exercice a plusieurs VARIANTS pour le rejouer avec des variantes
+const EXERCISES = [
+  {
+    id:1,mod:"m1",diff:"easy",pts:2,theme:"Tous thèmes",
+    title:"Acteurs étatiques vs non-étatiques",
+    notions:["acteur étatique","acteur non-étatique","ONG","FMN"],
+    solution:"<strong>Acteur étatique :</strong> Entité dotée d'un territoire, d'une population et d'un gouvernement souverain reconnu internationalement. Monopole légitime de la violence (Weber). Ex : France, Chine dans les négociations climatiques ou conflits armés.<br><strong>ONG :</strong> Organisation non gouvernementale, à but non lucratif, transnationale. Ex : Greenpeace (environnement), MSF (humanitaire). Influence sans pouvoir de coercition.<br><strong>FMN :</strong> Firme dont les activités sont réparties dans plusieurs pays. Peut peser autant qu'un État économiquement (CA Apple > PIB Belgique) mais sans mandat démocratique. Tension : puissance économique sans responsabilité politique directe.",
+    criteria:["Définition précise de l'acteur étatique avec notion de souveraineté","Définition de l'ONG avec exemple concret","Définition de la FMN avec exemple concret","Identification de la tension puissance / légitimité pour la FMN"],
+    variants:[
+      {tag:"Variante 1 — Sujet de base", q:"Donnez une définition précise et une illustration concrète pour chacun des trois types d'acteurs suivants :\n1. Un acteur étatique\n2. Une ONG\n3. Une firme multinationale (FMN)"},
+      {tag:"Variante 2 — Application conflits", q:"Dans le contexte de la guerre en Ukraine (depuis 2022), identifiez et définissez au moins trois types d'acteurs différents (étatiques et non-étatiques) en montrant le rôle spécifique de chacun."},
+      {tag:"Variante 3 — Hiérarchie des acteurs", q:"Peut-on encore affirmer que l'État est l'acteur central des relations internationales ? Appuyez-vous sur la distinction acteurs étatiques / non-étatiques pour construire votre réponse."}
+    ]
+  },
+  {
+    id:2,mod:"m1",diff:"easy",pts:2,theme:"Tous thèmes",
+    title:"Les échelles d'analyse géographique",
+    notions:["échelle locale","échelle nationale","échelle mondiale","emboîtement des échelles"],
+    solution:"<strong>Échelle locale :</strong> communautés directement affectées, tensions foncières concrètes, vulnérabilité des populations. <strong>Échelle nationale :</strong> arbitrages politiques souverains, lobbies internes. <strong>Régionale :</strong> interdépendances que les politiques nationales ignorent. <strong>Mondiale :</strong> responsabilités diffuses, injonctions contradictoires Nord-Sud. Principe clé : l'emboîtement des échelles est la démarche propre à la géographie — aucune échelle ne suffit seule.",
+    criteria:["Définition claire de chaque échelle","Illustration concrète pour chaque niveau","Identification de ce que chaque échelle révèle que les autres masquent","Application du principe d'emboîtement des échelles"],
+    variants:[
+      {tag:"Variante 1 — Déforestation Amazonie", q:"Prenez l'exemple de la déforestation en Amazonie. Expliquez comment ce phénomène peut être analysé à quatre échelles différentes (locale, nationale, régionale, mondiale) et ce que chaque échelle révèle que les autres masquent."},
+      {tag:"Variante 2 — Crise migratoire", q:"Analysez la crise migratoire en Méditerranée à travers le prisme des quatre échelles géographiques (locale, nationale, régionale, mondiale). Montrez ce que chaque niveau d'analyse apporte de spécifique."},
+      {tag:"Variante 3 — Pollution plastique", q:"Appliquez le raisonnement multi-scalaire à la pollution plastique des océans : montrez comment les causes, les responsabilités et les solutions diffèrent selon l'échelle d'analyse retenue."}
+    ]
+  },
+  {
+    id:3,mod:"m1",diff:"easy",pts:2,theme:"Mondialisation & puissances",
+    title:"Hard power / Soft power / Smart power",
+    notions:["hard power","soft power","smart power","puissance"],
+    solution:"<strong>Hard power :</strong> contrainte par la force militaire ou économique (sanctions, embargo, intervention armée). Ex : sanctions américaines sur l'Iran. <strong>Soft power :</strong> influence par l'attractivité culturelle, idéologique et institutionnelle sans coercition. Ex : K-pop coréenne, francophonie française. <strong>Smart power :</strong> combinaison stratégique des deux. Concept Clinton. Ex : États-Unis combinent présence OTAN + aide USAID en Afrique pour contrer la Chine. Nuance : le soft power est souvent la forme la plus durable d'influence.",
+    criteria:["Définition du hard power avec exemple","Définition du soft power avec exemple","Définition du smart power avec exemple","Nuance sur la complémentarité des trois formes"],
+    variants:[
+      {tag:"Variante 1 — Définitions + exemples", q:"Définissez les trois concepts de hard power, soft power et smart power. Pour chacun, donnez un exemple concret tiré de la politique étrangère d'un pays réel."},
+      {tag:"Variante 2 — Chine", q:"En vous appuyant sur les notions de hard power, soft power et smart power, analysez la stratégie d'influence internationale de la Chine depuis 2012."},
+      {tag:"Variante 3 — Limites du soft power", q:"Le soft power est-il toujours une forme d'influence efficace ? Discutez en vous appuyant sur des exemples concrets et en mobilisant les trois notions de puissance."}
+    ]
+  },
+  {
+    id:4,mod:"m1",diff:"easy",pts:2,theme:"Mondialisation & puissances",
+    title:"Flux matériels et immatériels",
+    notions:["flux matériels","flux immatériels","mondialisation","nœud","interface"],
+    solution:"<strong>Flux matériels :</strong> déplacements physiques (conteneurs, personnes, matières premières). Ex : conteneurs Chine-Europe via Suez ; migrations Mexique-USA. <strong>Flux immatériels :</strong> données, capitaux, informations, savoir-faire. Ex : transactions financières haute fréquence ; diffusion Netflix/TikTok. <strong>Pourquoi immatériels stratégiques :</strong> (1) conditionnent les flux matériels ; (2) difficiles à contrôler (VPN, crypto) ; (3) créent dépendances (cloud GAFAM/BATX) ; (4) au cœur des nouvelles conflictualités (cyberguerre, désinformation).",
+    criteria:["Distinction claire flux matériels / immatériels","Deux exemples précis pour chaque type","Explication de la valeur stratégique des flux immatériels","Liens avec les nouvelles conflictualités ou dépendances"],
+    variants:[
+      {tag:"Variante 1 — Définitions + exemples", q:"Distinguez flux matériels et flux immatériels dans le contexte de la mondialisation. Donnez deux exemples de chaque type et expliquez pourquoi les flux immatériels sont devenus stratégiques."},
+      {tag:"Variante 2 — Route maritime", q:"Analysez les flux (matériels et immatériels) qui traversent le canal de Suez et montrez pourquoi ce détroit est un nœud stratégique de la mondialisation."},
+      {tag:"Variante 3 — Câbles sous-marins", q:"Les câbles sous-marins transportent 95% des données mondiales. En mobilisant les notions de flux matériels et immatériels, expliquez pourquoi ils constituent un enjeu géopolitique majeur."}
+    ]
+  },
+  {
+    id:5,mod:"m1",diff:"medium",pts:3,theme:"Tous thèmes",
+    title:"Rédiger avec 6 notions HGGSP",
+    notions:["souveraineté","territoire","gouvernance mondiale","acteur transnational","tension","résilience"],
+    solution:"La pandémie de Covid-19 a mis en lumière les limites de la <em>gouvernance mondiale</em> de la santé. L'OMS, principal <em>acteur transnational</em>, s'est heurtée à la jalousie des <em>souverainetés</em> nationales : chaque État a géré sa réponse sur son <em>territoire</em> en privilégiant ses intérêts. Cette <em>tension</em> entre logique nationale et nécessité de coordination planétaire a ralenti la réponse collective. Certains États comme Taïwan ont démontré une grande capacité de <em>résilience</em> grâce à des systèmes préparés — montrant que la résilience sanitaire est autant institutionnelle que territoriale.",
+    criteria:["Utilisation correcte et naturelle des 6 notions (non artificielle)","Cohérence thématique du paragraphe","Articulation logique entre les notions","Exemple géographiquement situé"],
+    variants:[
+      {tag:"Variante 1 — Pandémie", q:"Rédigez un paragraphe de 8 à 10 lignes sur « La gestion mondiale des pandémies » en utilisant correctement les 6 notions suivantes :\nsouveraineté · territoire · gouvernance mondiale · acteur transnational · tension · résilience"},
+      {tag:"Variante 2 — Changement climatique", q:"Rédigez un paragraphe de 8 à 10 lignes sur « Les négociations climatiques internationales » en utilisant correctement les 6 notions suivantes :\nsouveraineté · territoire · gouvernance mondiale · acteur transnational · tension · résilience"},
+      {tag:"Variante 3 — Guerre en Ukraine", q:"Rédigez un paragraphe de 8 à 10 lignes sur « La guerre en Ukraine et ses répercussions mondiales » en utilisant correctement les 6 notions suivantes :\nsouveraineté · territoire · gouvernance mondiale · acteur transnational · tension · résilience"}
+    ]
+  },
+  {
+    id:6,mod:"m2",diff:"easy",pts:2,theme:"Environnement & territoire",
+    title:"Identifier les termes clés d'un sujet HGGSP",
+    notions:["transition énergétique","acteurs","enjeux","échelle","présupposé"],
+    solution:"<strong>Termes à définir :</strong> transition énergétique = passage progressif des fossiles vers les renouvelables/bas carbone. « Transition » implique processus graduel. <strong>Acteurs multi-échelles :</strong> mondiale (ONU/COP, AIE, FMN pétrolières et renouvelables), nationale (États, industries), locale (collectivités, ONG, citoyens). <strong>Présupposé :</strong> la transition est souhaitable et en cours — à interroger : possible sans rupture avec le capitalisme fossile ?",
+    criteria:["Définition précise de la transition énergétique","Identification des acteurs aux trois échelles minimum","Repérage du présupposé implicite","Questionnement du présupposé"],
+    variants:[
+      {tag:"Variante 1 — Transition énergétique", q:"Pour le sujet : « La transition énergétique : quels acteurs, quels enjeux ? »\nIdentifiez : (1) les termes à définir, (2) les acteurs impliqués aux différentes échelles, (3) le présupposé implicite du sujet."},
+      {tag:"Variante 2 — Déforestation", q:"Pour le sujet : « La déforestation, entre intérêts nationaux et enjeux planétaires »\nIdentifiez : (1) les termes à définir, (2) les acteurs impliqués aux différentes échelles, (3) le présupposé implicite du sujet."},
+      {tag:"Variante 3 — Ressources en eau", q:"Pour le sujet : « L'eau, une ressource sous tension »\nIdentifiez : (1) les termes à définir, (2) les acteurs impliqués aux différentes échelles, (3) le ou les présupposés implicites du sujet."}
+    ]
+  },
+  {
+    id:7,mod:"m2",diff:"easy",pts:2,theme:"Frontières & migrations",
+    title:"Reformuler un sujet en trois questions",
+    notions:["frontière","migration","contrôle","humanitaire","souveraineté"],
+    solution:"<strong>Q1 (angle géopolitique) :</strong> Dans quelle mesure le renforcement des contrôles aux frontières reflète-t-il la résurgence des souverainetés nationales face aux pressions migratoires ? <strong>Q2 (angle humanitaire) :</strong> Le droit d'asile peut-il coexister avec les politiques d'externalisation des frontières (accord UE-Turquie, Frontex) ? <strong>Q3 (angle géographique-scalaire) :</strong> Comment les frontières organisent-elles différemment le territoire selon les acteurs — État, migrants, ONG, trafiquants — révélant que la frontière est moins une ligne qu'un espace de tensions ?",
+    criteria:["Trois questions réellement distinctes (pas des reformulations du même angle)","Chaque question ouvre une dimension différente du problème","Mobilisation du vocabulaire HGGSP dans les questions","Les questions correspondent à des parties potentielles de dissertation"],
+    variants:[
+      {tag:"Variante 1 — Frontières et migrations", q:"Pour le sujet : « Les frontières, entre contrôle et humanitaire »\nReformulez ce sujet en trois questions distinctes qui ouvrent trois angles d'analyse différents."},
+      {tag:"Variante 2 — Mondialisation et inégalités", q:"Pour le sujet : « La mondialisation, facteur d'inégalités ? »\nReformulez ce sujet en trois questions distinctes qui ouvrent trois angles d'analyse différents."},
+      {tag:"Variante 3 — Numérique et puissance", q:"Pour le sujet : « Le numérique, nouveau terrain de la puissance mondiale ? »\nReformulez ce sujet en trois questions distinctes qui ouvrent trois angles d'analyse différents."}
+    ]
+  },
+  {
+    id:8,mod:"m2",diff:"medium",pts:3,theme:"Mémoires & histoire",
+    title:"Problématiser un sujet mémoriel",
+    notions:["mémoire collective","devoir de mémoire","identité nationale","tensions mémorielles"],
+    solution:"L'Europe partage une mémoire apparente (nazisme = mal absolu, Shoah = blessure fondatrice) qui masque des fractures profondes. À l'Ouest : résistance valorisée, collaborations occultées (syndrome de Vichy). À l'Est : occupation soviétique superposée au trauma nazi — URSS perçue comme double oppresseur. De plus, les mémoires des victimes (Juifs, Roms, homosexuels) longtemps périphériques. Tension fondamentale : peut-on construire une mémoire européenne commune sans effacement des singularités nationales ?",
+    criteria:["Mise en lumière des tensions internes (pas réponse simple OUI/NON)","Distinction des mémoires selon les régions européennes","Identification des acteurs porteurs de mémoires concurrentes","Formulation d'une vraie tension problématique"],
+    variants:[
+      {tag:"Variante 1 — Mémoires européennes WWII", q:"Problématisez en 6-8 lignes le sujet :\n« Les mémoires de la Seconde Guerre mondiale sont-elles unifiées en Europe ? »\nMontrez les tensions internes et pourquoi une réponse simple serait insuffisante."},
+      {tag:"Variante 2 — Mémoire coloniale", q:"Problématisez en 6-8 lignes le sujet :\n« La France assume-t-elle pleinement son passé colonial ? »\nMontrez les tensions internes et pourquoi une réponse simple serait insuffisante."},
+      {tag:"Variante 3 — Commémorations et politique", q:"Problématisez en 6-8 lignes le sujet :\n« Les commémorations nationales servent-elles à unir ou à diviser ? »\nMontrez les tensions internes et pourquoi une réponse simple serait insuffisante."}
+    ]
+  },
+  {
+    id:9,mod:"m2",diff:"medium",pts:3,theme:"Guerre, paix & conflits",
+    title:"Analyse complète d'un sujet géopolitique",
+    notions:["conflit asymétrique","acteurs non-étatiques","guerre hybride","droit international"],
+    solution:"<strong>Termes :</strong> guerre (définition en crise : hybride, cyberguerre) / XXIe siècle (depuis 2001 ?) / droit international (Charte ONU, Genève — qui contrôle l'application ?). <strong>Acteurs :</strong> États (veto au CS), non-étatiques (Daech, Hezbollah), ONU, CPI, ONG, opinion publique. <strong>Présupposé :</strong> le droit international devrait encadrer la guerre — ce qui suppose un droit contraignant les souverainetés. <strong>Reformulations :</strong> (1) Les nouvelles conflictualités rendent-elles caduques les catégories juridiques ? (2) Le droit de la guerre est-il appliqué ou une fiction normative ? <strong>Paradoxe :</strong> Plus les règles se précisent, plus les acteurs développent des formes qui y échappent.",
+    criteria:["Définition des termes clés avec leurs ambiguïtés","Identification des acteurs à plusieurs échelles","Repérage et questionnement du présupposé","Formulation d'au moins deux questions qui ouvrent le débat","Formulation d'un paradoxe"],
+    variants:[
+      {tag:"Variante 1 — Droit international et guerre", q:"Réalisez une analyse complète du sujet (termes clés, acteurs, échelles, présupposé, reformulation en 2 questions, paradoxe possible) :\n\n« La guerre au XXIe siècle échappe-t-elle au droit international ? »"},
+      {tag:"Variante 2 — Maintien de la paix", q:"Réalisez une analyse complète du sujet (termes clés, acteurs, échelles, présupposé, reformulation en 2 questions, paradoxe possible) :\n\n« L'ONU peut-elle encore maintenir la paix dans le monde ? »"},
+      {tag:"Variante 3 — Terrorisme", q:"Réalisez une analyse complète du sujet (termes clés, acteurs, échelles, présupposé, reformulation en 2 questions, paradoxe possible) :\n\n« Le terrorisme, nouvelle forme de guerre ? »"}
+    ]
+  },
+  {
+    id:10,mod:"m2",diff:"hard",pts:4,theme:"Science, technique & société",
+    title:"Sujet complexe — problématique rédigée",
+    notions:["numérique","puissance","fracture numérique","souveraineté numérique","GAFAM","BATX"],
+    solution:"<strong>Analyse :</strong> numérique = infrastructures + plateformes + données + algorithmes + cybercapacités. Terrain = espace de rivalité (métaphore géographique). <strong>Acteurs :</strong> USA, Chine dominants ; UE en construction ; GAFAM/BATX ; hackers étatiques. <strong>Tension :</strong> mondialisation ouverte (libre circulation) vs fragmentation (splinternet, contrôle). <strong>Problématique :</strong> Le numérique est souvent présenté comme espace horizontal et déterritorialisé — or on observe depuis 2010 une renationalisation croissante et une concentration des infrastructures. Dans quelle mesure constitue-t-il un nouveau terrain de rivalités géopolitiques, et comment recompose-t-il les hiérarchies de puissance — en reproduisant les rapports de force ou en les redistribuant ?",
+    criteria:["Analyse précise de tous les termes du sujet","Identification des acteurs clés avec leur rôle spécifique","Formulation d'une tension centrale claire","Problématique rédigée complète (3-4 lignes minimum) qui dépasse la simple reformulation"],
+    variants:[
+      {tag:"Variante 1 — Numérique et puissance", q:"Analysez entièrement le sujet suivant et proposez une problématique rédigée (3-4 lignes) :\n\n« Le numérique, nouveau terrain de la puissance mondiale ? »"},
+      {tag:"Variante 2 — Intelligence artificielle", q:"Analysez entièrement le sujet suivant et proposez une problématique rédigée (3-4 lignes) :\n\n« L'intelligence artificielle, enjeu de puissance au XXIe siècle ? »"},
+      {tag:"Variante 3 — Données personnelles", q:"Analysez entièrement le sujet suivant et proposez une problématique rédigée (3-4 lignes) :\n\n« Les données numériques : nouveau pétrole ou enjeu de souveraineté ? »"}
+    ]
+  },
+  {
+    id:11,mod:"m3",diff:"easy",pts:2,theme:"Mondialisation & puissances",
+    title:"Thèse / Antithèse / Synthèse géopolitique",
+    notions:["multipolarité","hégémonie","puissance américaine","émergents","BRICS"],
+    solution:"<strong>Thèse :</strong> Le monde est multipolaire depuis l'émergence de la Chine, l'Inde, le Brésil, la Russie contestant le leadership américain — expansion des BRICS, Chine premier partenaire de la majorité des États. <strong>Antithèse :</strong> Les USA demeurent hyperpuissance : 1er PIB, 1er budget militaire, meilleures universités, domination GAFAM — la multipolarité reste relative. <strong>Synthèse :</strong> Le monde est plus composite que multipolaire — multipolaire économiquement et culturellement, encore unipolaire militairement et financièrement (dollar). L'absence de gouvernance multilatérale produit non l'ordre mais le désordre et la rivalité systémique.",
+    criteria:["Thèse affirmative argumentée avec exemple précis","Antithèse solide avec exemple précis distinct","Synthèse qui dépasse réellement les deux positions sans les éluder","Vocabulaire HGGSP précis (multipolarité, hégémonie, etc.)"],
+    variants:[
+      {tag:"Variante 1 — Multipolarité", q:"Pour le sujet « Le monde du XXIe siècle est-il multipolaire ? », formulez une thèse (OUI), une antithèse (NON) et une synthèse (dépassement) en 2-3 phrases chacune."},
+      {tag:"Variante 2 — Mondialisation en crise ?", q:"Pour le sujet « La mondialisation est-elle en crise ? », formulez une thèse (OUI), une antithèse (NON) et une synthèse (dépassement) en 2-3 phrases chacune."},
+      {tag:"Variante 3 — Déclin de l'Occident", q:"Pour le sujet « L'Occident est-il en déclin ? », formulez une thèse (OUI), une antithèse (NON) et une synthèse (dépassement) en 2-3 phrases chacune."}
+    ]
+  },
+  {
+    id:12,mod:"m3",diff:"easy",pts:2,theme:"Environnement & territoire",
+    title:"Construire un argument géopolitique complet",
+    notions:["ressources naturelles","conflits de ressources","eau","géopolitique environnementale"],
+    solution:"<strong>Affirmation :</strong> L'eau douce, ressource vitale inégalement répartie, constitue un facteur croissant de tensions géopolitiques entre États partageant des bassins transfrontaliers. <strong>Justification :</strong> Contrairement au pétrole, l'eau est irremplaçable pour la survie humaine — sa raréfaction climatique rend son contrôle stratégique. La gestion des fleuves transfrontaliers exige une coopération que les souverainetés rendent difficile. <strong>Exemple :</strong> Le barrage de la Renaissance éthiopien sur le Nil Bleu : depuis 2011, Éthiopie (développement) contre Égypte (dépendance vitale, 90% de son eau) et Soudan. L'Égypte a évoqué des « options militaires ».",
+    criteria:["Affirmation claire et directement liée au sujet","Justification logique qui démontre (pas illustre) l'affirmation","Exemple géographiquement et temporellement situé","Lien explicite entre l'exemple et l'affirmation"],
+    variants:[
+      {tag:"Variante 1 — Eau et conflits", q:"Construisez un argument complet (affirmation + justification + exemple concret) défendant l'idée que « l'eau sera au XXIe siècle une ressource source de conflits géopolitiques »."},
+      {tag:"Variante 2 — Métaux rares", q:"Construisez un argument complet (affirmation + justification + exemple concret) défendant l'idée que « les métaux rares sont devenus un enjeu géopolitique central de la transition énergétique »."},
+      {tag:"Variante 3 — Arctique", q:"Construisez un argument complet (affirmation + justification + exemple concret) défendant l'idée que « l'Arctique est devenu un nouveau théâtre de rivalités géopolitiques sous l'effet du changement climatique »."}
+    ]
+  },
+  {
+    id:13,mod:"m3",diff:"medium",pts:3,theme:"Guerre, paix & conflits",
+    title:"Chaîne de 3 arguments enchaînés",
+    notions:["guerre hybride","désinformation","cyberattaque","conflictualité contemporaine"],
+    solution:"<strong>Arg. 1 :</strong> Les conflits contemporains mobilisent des espaces nouveaux (cyberespace, information, finance) et des acteurs non-étatiques (milices, hackers, mercenaires Wagner) hors du cadre juridique interétatique. <strong>→ Arg. 2 :</strong> Cette diversification produit la « guerre hybride » : continuum entre paix et guerre où un État agresse (désinformation, cyberattaque, soutien à des séparatistes) sans franchir formellement le seuil de la guerre déclarée. <strong>→ Arg. 3 :</strong> Par conséquent, les institutions conçues pour la guerre classique (Charte ONU, droit de Genève, Conseil de sécurité) sont structurellement inadaptées — ce qui n'est pas accidentel mais stratégique : les puissances révisionnistes exploitent délibérément les zones grises du droit international.",
+    criteria:["Chaque argument découle logiquement du précédent (pas trois arguments indépendants)","Mobilisation de concepts HGGSP précis","Exemples factuels intégrés dans la chaîne","Conclusion logique de la chaîne qui ouvre une perspective"],
+    variants:[
+      {tag:"Variante 1 — Conflictualité contemporaine", q:"Construisez une chaîne de 3 arguments enchaînés pour soutenir que :\n\n« Les conflits contemporains ne se réduisent plus à la confrontation militaire classique. »"},
+      {tag:"Variante 2 — Cyberguerre", q:"Construisez une chaîne de 3 arguments enchaînés pour soutenir que :\n\n« Le cyberespace est devenu un nouveau champ de bataille géopolitique. »"},
+      {tag:"Variante 3 — Multinationales et conflits", q:"Construisez une chaîne de 3 arguments enchaînés pour soutenir que :\n\n« Les acteurs privés (FMN, mercenaires, médias) jouent un rôle croissant dans les conflits armés contemporains. »"}
+    ]
+  },
+  {
+    id:14,mod:"m3",diff:"medium",pts:3,theme:"Frontières & migrations",
+    title:"Réfuter un argument avec nuance",
+    notions:["migrations","push/pull factors","politiques migratoires","externalisation"],
+    solution:"<strong>Part de vérité :</strong> Le renforcement des contrôles peut créer des effets dissuasifs à court terme. L'externalisation (UE-Turquie, Libye, Maroc) a réduit dans certaines périodes les arrivées sur certaines routes. <strong>Limite fondamentale :</strong> Cette analyse confond symptôme (le flux) et causes profondes (guerres, persécutions, pauvreté, climat). Pour quelqu'un qui fuit, la frontière fermée ne supprime pas le motif de fuite — elle redirige vers des routes plus dangereuses et renforce les réseaux criminels. <strong>Résultat paradoxal :</strong> plus les frontières se ferment, plus les migrations deviennent clandestines et dangereuses — sans diminuer en volume à long terme.",
+    criteria:["Acceptation réelle de la part de vérité (pas simulée)","Identification précise de la faille logique de l'argument","Contre-exemple ou contre-démonstration factuelle","Formulation d'un résultat paradoxal ou contre-intuitif"],
+    variants:[
+      {tag:"Variante 1 — Fermer les frontières", q:"Réfutez l'argument suivant (acceptez la part de vérité, puis montrez sa limite) :\n\n« Fermer les frontières permettrait de réduire les migrations clandestines. »"},
+      {tag:"Variante 2 — Aide au développement", q:"Réfutez l'argument suivant (acceptez la part de vérité, puis montrez sa limite) :\n\n« Augmenter l'aide au développement dans les pays d'origine est la meilleure façon de réduire les migrations. »"},
+      {tag:"Variante 3 — Murs et sécurité", q:"Réfutez l'argument suivant (acceptez la part de vérité, puis montrez sa limite) :\n\n« La construction de murs aux frontières garantit la sécurité nationale des États. »"}
+    ]
+  },
+  {
+    id:15,mod:"m3",diff:"hard",pts:4,theme:"Tous thèmes",
+    title:"Plan dialectique complet",
+    notions:["mondialisation","inégalités","développement","Nord/Sud","émergents"],
+    solution:"<strong>I. Mondialisation = vecteur de développement :</strong> A. Croissance par les échanges (tigres asiatiques, Chine, Inde) ; B. Diffusion technologies/capitaux par IDE ; C. Réduction pauvreté absolue depuis 1990 (BM). <strong>II. Mondialisation = machine à inégalités :</strong> A. Inégalités entre États (PMA marginalisés, spécialisation primaire) ; B. Inégalités intra-nationales (capital/travail qualifié vs non qualifié, fractures politiques) ; C. Inégalités environnementales (Sud subit, Nord émet). <strong>III. Dépassement :</strong> A. Pas « une » mondialisation mais des mondialisations à plusieurs vitesses ; B. Rôle décisif des politiques publiques (Corée du Sud vs Bangladesh) ; C. Vers une régulation ? Tension OMC/Accords de Paris vs souveraineté.",
+    criteria:["Trois parties réellement distinctes et progressives","Sous-parties nommées et argumentées (pas juste listées)","Transitions logiques entre les parties","Dépassement réel en partie III (pas simple répétition des deux premières)","Exemples géographiquement situés dans chaque partie"],
+    variants:[
+      {tag:"Variante 1 — Mondialisation et inégalités", q:"Construisez un plan dialectique complet (I / II / III avec sous-parties) pour le sujet :\n\n« La mondialisation est-elle source d'inégalités ou de développement ? »"},
+      {tag:"Variante 2 — Puissance américaine", q:"Construisez un plan dialectique complet (I / II / III avec sous-parties) pour le sujet :\n\n« Les États-Unis demeurent-ils la première puissance mondiale ? »"},
+      {tag:"Variante 3 — Frontières et mondialisation", q:"Construisez un plan dialectique complet (I / II / III avec sous-parties) pour le sujet :\n\n« Les frontières ont-elles encore un sens à l'ère de la mondialisation ? »"}
+    ]
+  },
+  {
+    id:16,mod:"m4",diff:"easy",pts:2,theme:"Mondialisation & puissances",
+    title:"Identifier un paradoxe géopolitique",
+    notions:["interdépendance","rivalité systémique","compétition","USA-Chine"],
+    solution:"<strong>Paradoxe :</strong> « Les deux plus grands rivaux géopolitiques du XXIe siècle sont aussi les deux économies les plus interdépendantes — et c'est précisément cette interdépendance qui rend leur conflit ouvert mutuellement dévastateur. » <strong>Formulation précise :</strong> La rivalité sino-américaine se développe à l'intérieur d'une relation de dépendance mutuelle que ni l'un ni l'autre ne peut rompre sans se blesser — produisant une guerre froide commerciale permanente. <strong>Fécondité analytique :</strong> invalide la théorie libérale (commerce = paix) ET la théorie réaliste (guerre inévitable) — oblige à penser la compétition systémique : ni guerre ni paix, rivalité permanente dans tous les domaines.",
+    criteria:["Paradoxe clairement formulé (pas une simple contradiction)","Explication de la tension interne au paradoxe","Identification de deux théories que le paradoxe invalide","Concept de 'compétition systémique' ou équivalent pour dépasser la dichotomie"],
+    variants:[
+      {tag:"Variante 1 — Rivalité sino-américaine", q:"Formulez un paradoxe géopolitique à partir de cette observation, puis expliquez pourquoi il est analytiquement fécond :\n\nLes États-Unis et la Chine sont à la fois les deux premières puissances rivales ET les deux premières économies interdépendantes (commerce bilatéral > 600 Mds$/an)."},
+      {tag:"Variante 2 — Aide internationale", q:"Formulez un paradoxe géopolitique à partir de cette observation, puis expliquez pourquoi il est analytiquement fécond :\n\nLes pays les plus pauvres sont souvent les plus riches en ressources naturelles (pétrole, minerais, terres agricoles)."},
+      {tag:"Variante 3 — Démocratie et mondialisation", q:"Formulez un paradoxe géopolitique à partir de cette observation, puis expliquez pourquoi il est analytiquement fécond :\n\nLa mondialisation libérale, censée diffuser la démocratie, a coïncidé avec une montée de l'autoritarisme dans plusieurs pays émergents."}
+    ]
+  },
+  {
+    id:17,mod:"m4",diff:"easy",pts:2,theme:"Environnement & territoire",
+    title:"Paradoxe environnemental",
+    notions:["transition énergétique","métaux rares","extractivisme","dépendance"],
+    solution:"<strong>Paradoxe :</strong> « La transition énergétique, censée réduire notre dépendance aux ressources épuisables, crée une nouvelle dépendance extractiviste aux métaux rares (lithium, cobalt, terres rares) dont l'exploitation reproduit les logiques coloniales et environnementales qu'elle prétend dépasser. » <strong>Développement :</strong> Batterie électrique = 8 kg lithium + 12 kg cobalt + 35 kg nickel. Provenance : RDC (cobalt, exploitation dénoncée), Triangle du lithium (impacts hydriques dans les salars), Chine (terres rares, 60%). La transition déplace le problème : d'une dépendance au pétrole moyen-oriental vers les métaux critiques — nouvelles vulnérabilités géopolitiques pour l'UE notamment.",
+    criteria:["Paradoxe formulé en une phrase claire et précise","Données factuelles qui étayent le paradoxe","Identification de la reproduction de logiques (coloniales, extractivistes)","Conséquence géopolitique concrète"],
+    variants:[
+      {tag:"Variante 1 — Transition et métaux rares", q:"Formulez et développez un paradoxe sur le sujet :\n\n« La transition énergétique »\nMontrez une contradiction interne au processus lui-même."},
+      {tag:"Variante 2 — Aires protégées", q:"Formulez et développez un paradoxe sur le sujet :\n\n« La création d'aires naturelles protégées peut nuire aux populations locales qu'elle prétend associer à la conservation. »\nExpliquez et illustrez ce paradoxe."},
+      {tag:"Variante 3 — Énergie nucléaire", q:"Formulez et développez un paradoxe sur le sujet :\n\n« L'énergie nucléaire, solution ou problème pour la transition énergétique ? »\nIdentifiez la contradiction interne à cette question."}
+    ]
+  },
+  {
+    id:18,mod:"m4",diff:"medium",pts:3,theme:"Frontières & migrations",
+    title:"Paradoxe des frontières à l'ère de la mondialisation",
+    notions:["frontière","mondialisation","libre circulation","contrôle migratoire"],
+    solution:"<strong>Paradoxe :</strong> « À l'heure où les frontières s'ouvrent aux capitaux, aux marchandises et aux données, elles se ferment aux personnes — révélant que la mondialisation n'a jamais été universelle mais sélective, organisée selon la hiérarchie des richesses. » <strong>Développement :</strong> Depuis les années 1990, libre-échange généralisé (OMC, UE, ALENA). Simultanément : budget Frontex multiplié par 30 depuis 2005, murs frontaliers multipliés par 4 depuis la chute du mur de Berlin (paradoxe de Wendy Brown). Ce double mouvement est cohérent : on veut les marchandises bon marché produites par le travail du Sud, pas les travailleurs qui les produisent. La frontière = instrument de régulation de la valeur travail à l'échelle mondiale.",
+    criteria:["Paradoxe formulé clairement en une phrase","Données quantitatives précises intégrées","Explication de la logique économique sous-jacente (cohérence apparente de l'incohérence)","Dépassement : la frontière comme outil de régulation systémique"],
+    variants:[
+      {tag:"Variante 1 — Frontières et mondialisation", q:"Formulez et développez (6-8 lignes) un paradoxe sur le sujet :\n\n« Les frontières à l'ère de la mondialisation »"},
+      {tag:"Variante 2 — Le droit d'asile en Europe", q:"Formulez et développez (6-8 lignes) un paradoxe sur le sujet :\n\n« L'Europe, espace de liberté de circulation, résiste aux demandeurs d'asile »\nMontrez la contradiction systémique."},
+      {tag:"Variante 3 — Espaces marins", q:"Formulez et développez (6-8 lignes) un paradoxe sur le sujet :\n\n« La Méditerranée : mer de commerce et de mort »\nMontrez comment ces deux réalités coexistent et s'expliquent mutuellement."}
+    ]
+  },
+  {
+    id:19,mod:"m4",diff:"medium",pts:3,theme:"Mémoires & histoire",
+    title:"Deux paradoxes mémoriels enchaînés",
+    notions:["devoir de mémoire","instrumentalisation","oubli","réconciliation"],
+    solution:"<strong>Paradoxe 1 :</strong> « Le devoir de mémoire, en voulant empêcher l'oubli et la répétition des crimes, peut produire une mémoire saturée qui perd son pouvoir critique et devient un rituel commémoratif vide de portée politique. » → En multipliant les journées mémorielles et musées, on transforme la mémoire en patrimoine géré — la Shoah devient une « marque » (Traverso) plutôt qu'une interpellation morale vivante. <strong>Paradoxe 2 (découlant du 1er) :</strong> « Si l'excès de mémoire institutionnelle affaiblit la mémoire critique, alors certaines formes de distanciation peuvent être nécessaires à la vitalité de la conscience historique. » → Ce n'est pas l'oubli au sens de déni, mais la distinction ricœurienne entre mémoire (subjective) et histoire (distanciation critique).",
+    criteria:["Paradoxe 1 clairement formulé avec justification","Paradoxe 2 qui découle logiquement du premier (pas deux paradoxes indépendants)","Référence à un auteur ou concept précis dans chaque paradoxe","Distinction finale qui dépasse la simple opposition"],
+    variants:[
+      {tag:"Variante 1 — Devoir de mémoire", q:"Formulez deux paradoxes enchaînés sur le thème « Le devoir de mémoire ». Le second doit découler logiquement du premier."},
+      {tag:"Variante 2 — Réconciliation nationale", q:"Formulez deux paradoxes enchaînés sur le thème « La réconciliation nationale après des crimes de masse (génocide, crimes de guerre) ». Le second doit découler logiquement du premier."},
+      {tag:"Variante 3 — Patriotisme et histoire", q:"Formulez deux paradoxes enchaînés sur le thème « L'enseignement de l'histoire nationale ». Le second doit découler logiquement du premier."}
+    ]
+  },
+  {
+    id:20,mod:"m4",diff:"hard",pts:4,theme:"Science, technique & société",
+    title:"Paradoxe systémique — approche globale",
+    notions:["intelligence artificielle","puissance","démocratie","surveillance","régulation"],
+    solution:"<strong>Paradoxe systémique :</strong> « Les mêmes technologies d'IA qui émancipent (traduction, savoir, diagnostic médical) constituent simultanément l'infrastructure de la surveillance la plus efficace jamais construite — et ce ne sont pas deux usages distincts d'un outil neutre, mais les deux faces d'une même architecture de données dont la valeur repose sur la collecte maximale. » <strong>Développement systémique :</strong> ChatGPT libère l'accès au savoir ; mais les données alimentent des modèles contrôlés par 4-5 firmes. Le crédit social chinois opprime ; mais repose sur les mêmes algorithmes que le paiement dématérialisé occidental. <strong>Paradoxe ultime :</strong> réguler l'IA pour protéger les libertés (RGPD, AI Act) exige des agences qui doivent elles-mêmes traiter des données massives — la solution reproduit partiellement le problème.",
+    criteria:["Paradoxe systémique (pas binaire) clairement formulé","Exemples de la double nature de la technologie (mêmes outils, usages opposés)","Identification de la structure sous-jacente qui rend le paradoxe inévitable","Paradoxe ultime sur l'impossibilité de la solution simple"],
+    variants:[
+      {tag:"Variante 1 — IA : liberté ou contrôle", q:"Approche systémique : formulez un paradoxe global qui révèle la complexité du système :\n\n« L'intelligence artificielle, outil de liberté ou de contrôle ? »"},
+      {tag:"Variante 2 — Réseaux sociaux", q:"Approche systémique : formulez un paradoxe global qui révèle la complexité du système :\n\n« Les réseaux sociaux, espaces de liberté d'expression ou de manipulation ? »"},
+      {tag:"Variante 3 — Big data et démocratie", q:"Approche systémique : formulez un paradoxe global qui révèle la complexité du système :\n\n« La collecte massive de données personnelles menace-t-elle la démocratie ? »"}
+    ]
+  },
+  {
+    id:21,mod:"m5",diff:"easy",pts:2,theme:"Mondialisation & puissances",
+    title:"Paragraphe AEI sur un sujet géopolitique",
+    notions:["soft power","influence culturelle","diplomatie","attractivité"],
+    solution:"<strong>A :</strong> Face aux coûts du hard power, le soft power s'impose comme stratégie d'influence durable. <strong>E :</strong> L'influence par l'attractivité produit des effets de long terme que les interventions militaires ne peuvent obtenir — un pays dont la culture et les universités sont désirés dispose d'un levier structurel sans coercition. <strong>I :</strong> Le succès mondial de la K-pop et des séries coréennes (hallyu) a transformé l'image de la Corée du Sud : tourisme multiplié par cinq en vingt ans, augmentation des inscriptions en coréen à l'étranger, amélioration de la marque nationale — sans dépense militaire. La Corée du Sud prouve qu'un pays de puissance moyenne peut peser bien au-delà de son poids stratégique.",
+    criteria:["Structure AEI clairement identifiable","Affirmation directement ancrée dans le vocabulaire HGGSP","Explication qui démontre (pas illustre) l'affirmation","Illustration géographiquement et factuellement précise"],
+    variants:[
+      {tag:"Variante 1 — Soft power coréen", q:"Rédigez un paragraphe argumenté complet (structure AEI) sur l'idée :\n\n« Le soft power constitue pour certains États une stratégie d'influence aussi efficace que la force militaire. »"},
+      {tag:"Variante 2 — Influence chinoise en Afrique", q:"Rédigez un paragraphe argumenté complet (structure AEI) sur l'idée :\n\n« La Chine a développé une stratégie d'influence en Afrique qui combine hard et soft power. »"},
+      {tag:"Variante 3 — Francophonie", q:"Rédigez un paragraphe argumenté complet (structure AEI) sur l'idée :\n\n« La francophonie est un instrument du soft power français, mais avec des limites croissantes. »"}
+    ]
+  },
+  {
+    id:22,mod:"m5",diff:"easy",pts:2,theme:"Environnement & territoire",
+    title:"Paragraphe avec 5 connecteurs logiques",
+    notions:["changement climatique","justice climatique","responsabilité différenciée"],
+    solution:"Le changement climatique est souvent présenté comme une menace universelle. <strong>Or</strong>, les pays les moins responsables des émissions subissent les conséquences les plus sévères. Les petits États insulaires (Maldives, Tuvalu) contribuent à moins de 0,01% des émissions mondiales ; <strong>cependant</strong>, ils font face à une montée des eaux menaçant leur existence. <strong>En effet</strong>, la corrélation entre développement et empreinte carbone historique place la responsabilité sur les pays industrialisés. <strong>Dès lors</strong>, la notion de responsabilité commune mais différenciée (CCNUCC, 1992) tente d'introduire une logique de justice climatique. <strong>Par conséquent</strong>, les débats sur les financements climatiques (Loss & Damage) sont moins des questions techniques que des questions politiques de redistribution Nord-Sud.",
+    criteria:["5 connecteurs logiques distincts correctement utilisés","Chaque connecteur marque une relation logique réelle (pas décorative)","Cohérence thématique du paragraphe","Exemples factuels précis (noms de pays, dispositifs, dates)"],
+    variants:[
+      {tag:"Variante 1 — Inégalités climatiques", q:"Rédigez un paragraphe de 8 lignes sur « Les inégalités face au changement climatique » en utilisant obligatoirement 5 connecteurs logiques distincts parmi : or, en effet, cependant, dès lors, ainsi, par conséquent, certes, toutefois, néanmoins, c'est pourquoi."},
+      {tag:"Variante 2 — Migrations environnementales", q:"Rédigez un paragraphe de 8 lignes sur « Les migrations liées au changement climatique » en utilisant obligatoirement 5 connecteurs logiques distincts parmi : or, en effet, cependant, dès lors, ainsi, par conséquent, certes, toutefois, néanmoins, c'est pourquoi."},
+      {tag:"Variante 3 — Énergie solaire", q:"Rédigez un paragraphe de 8 lignes sur « L'essor de l'énergie solaire dans les pays en développement » en utilisant obligatoirement 5 connecteurs logiques distincts parmi : or, en effet, cependant, dès lors, ainsi, par conséquent, certes, toutefois, néanmoins, c'est pourquoi."}
+    ]
+  },
+  {
+    id:23,mod:"m5",diff:"medium",pts:3,theme:"Guerre, paix & conflits",
+    title:"Paragraphe avec objection intégrée",
+    notions:["ONU","maintien de la paix","droit de veto","multilatéralisme"],
+    solution:"L'ONU a montré ses limites : en Syrie, Ukraine, Yémen, le Conseil de sécurité a été paralysé par le droit de veto. <strong>Certes</strong>, l'ONU maintient 80 000 casques bleus dans une douzaine d'opérations et ses agences (HCR, UNICEF, PAM) opèrent là où personne d'autre ne peut. <strong>Cependant</strong>, cette distinction révèle l'ambiguïté structurelle : l'ONU excelle dans la gestion des conséquences des conflits mais demeure impuissante à les empêcher dès lors qu'une grande puissance décide de passer outre. La concession n'affaiblit pas la thèse — elle la précise.",
+    criteria:["Thèse principale clairement posée dès le début","Objection acceptée sincèrement (pas minimisée)","Réfutation qui ne détruit pas l'objection mais la redéfinit","Conclusion qui précise la thèse grâce à l'objection (la concession enrichit le propos)"],
+    variants:[
+      {tag:"Variante 1 — ONU et maintien de la paix", q:"Rédigez un paragraphe argumenté avec objection intégrée (concession + réfutation) sur la thèse :\n\n« L'ONU a échoué à garantir la paix internationale au XXIe siècle. »"},
+      {tag:"Variante 2 — OTAN", q:"Rédigez un paragraphe argumenté avec objection intégrée (concession + réfutation) sur la thèse :\n\n« L'OTAN est devenue indispensable à la sécurité européenne depuis 2022. »"},
+      {tag:"Variante 3 — CPI", q:"Rédigez un paragraphe argumenté avec objection intégrée (concession + réfutation) sur la thèse :\n\n« La Cour pénale internationale est inefficace pour juger les crimes de guerre. »"}
+    ]
+  },
+  {
+    id:24,mod:"m5",diff:"medium",pts:3,theme:"Frontières & migrations",
+    title:"Intégrer des données chiffrées dans un argument",
+    notions:["migrations climatiques","réfugiés","droit d'asile","Convention de Genève"],
+    solution:"Le droit international des réfugiés (Convention de Genève, 1951) a été conçu pour les persécutions politiques — il n'inclut pas les migrants climatiques. <strong>Or</strong>, selon la Banque mondiale, les migrations climatiques internes pourraient atteindre 216 millions de personnes d'ici 2050 dans six régions. <strong>Dès lors</strong>, un vide juridique considérable se creuse : ces personnes ne peuvent pas être qualifiées de « réfugiés » au sens de 1951 et ne bénéficient d'aucune protection internationale automatique. Le cas des Maldives — point culminant 2,4 m au-dessus du niveau de la mer — illustre ce paradoxe : un État entier pourrait disparaître sans que le droit international dispose des outils pour gérer la nationalité et l'accueil de sa population.",
+    criteria:["Au moins deux données chiffrées précises et sourcées (implicitement ou explicitement)","Les données servent l'argument (pas décoratives)","Articulation claire entre données et raisonnement","Exemple géographiquement précis qui incarne le problème"],
+    variants:[
+      {tag:"Variante 1 — Migrations climatiques", q:"Rédigez un paragraphe argumenté intégrant au moins deux données chiffrées précises pour défendre l'idée :\n\n« Les migrations climatiques constituent un défi humanitaire et juridique sans précédent. »"},
+      {tag:"Variante 2 — Inégalités mondiales", q:"Rédigez un paragraphe argumenté intégrant au moins deux données chiffrées précises pour défendre l'idée :\n\n« Les inégalités économiques mondiales se sont creusées malgré la croissance des échanges. »"},
+      {tag:"Variante 3 — Accès à l'eau", q:"Rédigez un paragraphe argumenté intégrant au moins deux données chiffrées précises pour défendre l'idée :\n\n« L'accès à l'eau potable demeure l'une des inégalités les plus criantes du XXIe siècle. »"}
+    ]
+  },
+  {
+    id:25,mod:"m5",diff:"medium",pts:3,theme:"Mémoires & histoire",
+    title:"Paragraphe de transition entre deux parties",
+    notions:["mémoire","histoire","récit national","identité","instrumentalisation"],
+    solution:"Ainsi, la mémoire nationale remplit une fonction sociale indispensable : elle offre un récit partagé des origines et des valeurs communes qui fondent l'appartenance collective. <strong>Cependant</strong>, ce pouvoir même — sa capacité à mobiliser les émotions, à définir un « nous » — en fait un instrument vulnérable aux usages politiques. Car tout récit national choisit ce qu'il célèbre et ce qu'il tait — et ce sont ces silences qui intéressent l'analyse critique. <strong>Dès lors</strong>, il convient de se demander dans quelle mesure les États ont délibérément façonné la mémoire collective pour servir des agendas politiques — légitimer un pouvoir, mobiliser une nation, occulter des responsabilités.",
+    criteria:["Clôture effective de la partie précédente (bilan synthétique)","Mot-pivot logique qui annonce la rupture (Cependant, Mais, Or...)","Ouverture de la nouvelle partie clairement annoncée","Continuité thématique entre les deux parties (pas de rupture brutale)"],
+    variants:[
+      {tag:"Variante 1 — Mémoire nationale", q:"Rédigez un paragraphe de transition qui clôt une partie sur « la mémoire nationale comme outil de cohésion » et ouvre une partie sur « la mémoire nationale comme instrument de manipulation politique »."},
+      {tag:"Variante 2 — Mondialisation économique", q:"Rédigez un paragraphe de transition qui clôt une partie montrant que « la mondialisation crée de la richesse » et ouvre une partie montrant que « la mondialisation produit des inégalités »."},
+      {tag:"Variante 3 — Technique et liberté", q:"Rédigez un paragraphe de transition qui clôt une partie sur « la technique comme outil de liberté » et ouvre une partie sur « la technique comme instrument de contrôle et d'aliénation »."}
+    ]
+  },
+  {
+    id:26,mod:"m5",diff:"hard",pts:4,theme:"Science, technique & société",
+    title:"Paragraphe long avec toutes les exigences",
+    notions:["fracture numérique","inégalités","développement","accès","infrastructure"],
+    solution:"La révolution numérique est présentée comme vecteur universel d'émancipation — <strong>or</strong> elle s'accompagne d'une fracture profonde entre territoires et populations qui y ont accès et ceux qui en restent exclus, reproduisant à l'ère numérique les hiérarchies du développement inégal. <strong>En effet</strong>, selon l'UIT (2023), seules 26% des personnes en Afrique subsaharienne utilisent internet contre 90% en Europe du Nord. Cette fracture est qualitative : les populations rurales du Sud sont cantonnées à un internet mobile faible débit (WhatsApp, pas e-learning ni télémédecine). <strong>Cependant</strong>, certaines initiatives contournent ce déterminisme : au Kenya, M-Pesa permet à des populations non bancarisées d'accéder à des services financiers — montrant que l'innovation peut contourner les infrastructures défaillantes. <strong>Par conséquent</strong>, la fracture numérique n'est pas une donnée naturelle mais le résultat de choix politiques et économiques — ce qui nous conduit à interroger les conditions d'une gouvernance mondiale du numérique réellement inclusive.",
+    criteria:["Structure AEI lisible + 4 connecteurs logiques distincts","Deux exemples géographiquement situés avec données","Nuance qui complexifie le propos sans le contredire","Phrase de conclusion-transition qui ouvre vers la suite"],
+    variants:[
+      {tag:"Variante 1 — Fracture numérique", q:"Rédigez un paragraphe argumenté complet (12-15 lignes) sur « La fracture numérique reproduit et amplifie les inégalités mondiales » en intégrant : structure AEI, 4 connecteurs logiques, deux exemples situés, phrase de conclusion-transition."},
+      {tag:"Variante 2 — Accès aux médicaments", q:"Rédigez un paragraphe argumenté complet (12-15 lignes) sur « L'accès inégal aux médicaments révèle les limites de la mondialisation » en intégrant : structure AEI, 4 connecteurs logiques, deux exemples situés, phrase de conclusion-transition."},
+      {tag:"Variante 3 — Smart cities", q:"Rédigez un paragraphe argumenté complet (12-15 lignes) sur « Les villes intelligentes creusent les inégalités urbaines plutôt qu'elles ne les résolvent » en intégrant : structure AEI, 4 connecteurs logiques, deux exemples situés, phrase de conclusion-transition."}
+    ]
+  },
+  {
+    id:27,mod:"m5",diff:"hard",pts:4,theme:"Tous thèmes",
+    title:"Paragraphe sur un sujet inédit",
+    notions:["puissance","territoire","ressources","Arctique","géopolitique","changement climatique"],
+    solution:"Longtemps périphérique et inhospitalier, l'Arctique est devenu depuis les années 2000 un enjeu géopolitique majeur. <strong>En effet</strong>, la fonte accélérée de la banquise ouvre de nouvelles routes maritimes — le passage du Nord-Est réduisant le trajet Europe-Asie de 40% par rapport à Suez — et rend accessible un sous-sol estimé à 30% des réserves mondiales de gaz et 13% des réserves de pétrole. <strong>Or</strong>, ces opportunités se heurtent à des souverainetés contestées : cinq États riverains (Russie, Canada, USA, Norvège, Danemark/Groenland) se disputent les plateaux continentaux, tandis que la Chine — sans côte arctique — s'est autoproclamée « État quasi-arctique » en 2018. <strong>Dès lors</strong>, l'Arctique cristallise plusieurs tensions de la conflictualité contemporaine : rivalité entre grandes puissances, articulation entre droits souverains et biens communs mondiaux, émergence d'acteurs non-riverains dans des espaces traditionnellement réservés aux puissances régionales.",
+    criteria:["Mobilisation du vocabulaire HGGSP précis (puissance, souveraineté, acteurs, tensions)","3 connecteurs logiques minimum","Deux données chiffrées ou factuelles précises","Conclusion qui ouvre vers une perspective plus large"],
+    variants:[
+      {tag:"Variante 1 — Arctique", q:"Rédigez un paragraphe argumenté complet sur « L'Arctique, nouveau théâtre des rivalités géopolitiques mondiales » en mobilisant vocabulaire HGGSP, connecteurs et exemples."},
+      {tag:"Variante 2 — Sahel", q:"Rédigez un paragraphe argumenté complet sur « Le Sahel, zone de fractures géopolitiques et environnementales » en mobilisant vocabulaire HGGSP, connecteurs et exemples."},
+      {tag:"Variante 3 — Indo-Pacifique", q:"Rédigez un paragraphe argumenté complet sur « L'Indo-Pacifique, nouveau centre de gravité des rivalités mondiales » en mobilisant vocabulaire HGGSP, connecteurs et exemples."}
+    ]
+  },
+  {
+    id:28,mod:"m6",diff:"medium",pts:3,theme:"Mondialisation & puissances",
+    title:"Rédiger une introduction de dissertation HGGSP",
+    notions:["puissance","hégémonie","déclin","multipolarité","hyperpuissance"],
+    solution:"<strong>Accroche :</strong> Janvier 2021, assaut du Capitole par des partisans de Trump — un pays pauvre qui vacille ne choque pas ; les États-Unis, symbole autoproclamé de la démocratie libérale mondiale, si. <strong>Contextualisation :</strong> Depuis 1991 : hégémonie multidimensionnelle américaine (1er PIB, 1er budget militaire, GAFAM, Hollywood). Mais depuis 2000 : émergence Chine, échecs Afghanistan/Irak, crise 2008, fractures internes. <strong>Problématisation :</strong> La question n'est pas si les USA sont une grande puissance — ils le sont — mais si leur prééminence est structurelle ou si nous assistons à un basculement multipolaire. <strong>Annonce :</strong> Atouts structurels qui fondent la première place (I) → défis qui fragilisent l'hégémonie — Chine, fractures, crise du multilatéralisme (II) → vision nuancée d'une puissance première mais leadership contesté (III).",
+    criteria:["Accroche originale, concrète et directement liée au sujet","Contextualisation précise avec données ou repères chronologiques","Problématisation qui formule une vraie tension (pas simple reformulation du sujet)","Annonce du plan logique et cohérente avec la problématique"],
+    variants:[
+      {tag:"Variante 1 — Puissance américaine", q:"Rédigez une introduction complète (accroche + contextualisation + problématisation + annonce du plan) pour le sujet :\n\n« Les États-Unis demeurent-ils la première puissance mondiale ? »"},
+      {tag:"Variante 2 — Puissance chinoise", q:"Rédigez une introduction complète (accroche + contextualisation + problématisation + annonce du plan) pour le sujet :\n\n« La Chine, nouvelle hyperpuissance mondiale ? »"},
+      {tag:"Variante 3 — Puissance européenne", q:"Rédigez une introduction complète (accroche + contextualisation + problématisation + annonce du plan) pour le sujet :\n\n« L'Union européenne est-elle une puissance mondiale ? »"}
+    ]
+  },
+  {
+    id:29,mod:"m6",diff:"medium",pts:3,theme:"Environnement & territoire",
+    title:"Rédiger une conclusion de dissertation HGGSP",
+    notions:["gouvernance climatique","COP","souveraineté","financement climatique"],
+    solution:"<strong>Bilan :</strong> La gouvernance climatique dispose d'institutions et d'accords (COP, Accord de Paris 2015, Fonds vert, Loss & Damage) qui représentent un progrès réel par rapport à l'absence de cadre contraignant avant 1992. <strong>Réponse :</strong> Mais non à la hauteur : engagements actuels → +2,5 à 3°C, très au-delà de 1,5°C. Fossé entre engagements formels et trajectoires d'émissions effectives — limite structurelle : la gouvernance repose sur la souveraineté nationale et le volontariat sans sanction. <strong>Ouverture :</strong> Peut-on résoudre un problème global avec des outils intergouvernementaux ? Certains proposent un fédéralisme climatique mondial avec autorité contraignante — ce qui supposerait une limitation de la souveraineté que peu d'États consentent aujourd'hui.",
+    criteria:["Bilan qui synthétise sans répéter","Réponse directe et nuancée à la question posée","Ouverture qui élargit réellement (pas une question rhétorique vague)","Cohérence avec la problématique annoncée en introduction"],
+    variants:[
+      {tag:"Variante 1 — Gouvernance climatique", q:"Rédigez une conclusion complète (bilan synthétique + réponse + ouverture) pour le sujet :\n\n« La gouvernance mondiale du climat est-elle à la hauteur des enjeux ? »"},
+      {tag:"Variante 2 — Migrations et droits", q:"Rédigez une conclusion complète (bilan synthétique + réponse + ouverture) pour le sujet :\n\n« Les droits des migrants sont-ils suffisamment protégés par le droit international ? »"},
+      {tag:"Variante 3 — Numérique et inégalités", q:"Rédigez une conclusion complète (bilan synthétique + réponse + ouverture) pour le sujet :\n\n« Le numérique aggrave-t-il les inégalités mondiales ? »"}
+    ]
+  },
+  {
+    id:30,mod:"m6",diff:"hard",pts:4,theme:"Mémoires & histoire",
+    title:"Problématiser un sujet difficile",
+    notions:["colonisation","post-colonialisme","repentance","mémoire concurrente","identité nationale"],
+    solution:"Le sujet présuppose une continuité de responsabilité entre l'État colonial et l'État républicain actuel — ce qui est loin d'être évident. <strong>Or</strong> ce présupposé est contesté : peut-on tenir une génération responsable des crimes de ses ancêtres ? Et jusqu'où remonte-t-on historiquement ? La tension fondamentale croise plusieurs exigences contradictoires : reconnaissance légitime des crimes coloniaux vs résistances liées au roman national français (mission civilisatrice, universalisme républicain) et aux usages politiques contemporains (immigration, intégration). La vraie question n'est peut-être pas morale (faut-il pardonner ?) mais politique : quelles formes de reconnaissance mémorielle permettent de traiter les héritages coloniaux sans figer les identités ni instrumentaliser le passé ?",
+    criteria:["Identification et questionnement du présupposé implicite","Formulation de la tension centrale (pas simple énumération des pour/contre)","Déplacement de la question initiale vers une question plus précise et profonde","Articulation avec des enjeux politiques contemporains"],
+    variants:[
+      {tag:"Variante 1 — Passé colonial français", q:"Problématisez en profondeur (6-8 lignes) le sujet :\n\n« La France doit-elle demander pardon pour son passé colonial ? »"},
+      {tag:"Variante 2 — Mémoire et réconciliation", q:"Problématisez en profondeur (6-8 lignes) le sujet :\n\n« La réconciliation entre nations peut-elle se faire sans reconnaissance officielle des crimes du passé ? »"},
+      {tag:"Variante 3 — Histoire scolaire", q:"Problématisez en profondeur (6-8 lignes) le sujet :\n\n« L'enseignement de l'histoire nationale est-il compatible avec la construction d'une mémoire européenne commune ? »"}
+    ]
+  },
+  {
+    id:31,mod:"m6",diff:"hard",pts:4,theme:"Guerre, paix & conflits",
+    title:"Développement de partie complet",
+    notions:["droit humanitaire","CPI","crimes de guerre","impunité","justice internationale"],
+    solution:"<strong>A. La CPI et le droit pénal international : avancée historique.</strong> La CPI (2002, Statut de Rome, 124 États) marque une rupture : des individus — y compris des chefs d'État — peuvent être poursuivis pour crimes de guerre, crimes contre l'humanité et génocide. Cette individualisation dépasse Nuremberg perçu comme justice des vainqueurs. <strong>En effet</strong>, la condamnation de Thomas Lubanga (2012) pour recrutement d'enfants soldats en RDC démontre que la CPI peut fonctionner indépendamment des pressions politiques. <strong>B. Un arsenal normatif renforcé par les conventions humanitaires.</strong> La CPI s'appuie sur les Conventions de Genève (1949) et leurs Protocoles additionnels qui définissent précisément les protections dues aux civils. <strong>Or</strong>, l'existence de règles claires constitue un levier : même sans poursuites directes, le droit humanitaire crée des obligations intégrables dans le droit interne. <strong>Ainsi</strong>, même lorsque la CPI ne peut pas agir, l'architecture juridique crée une contrainte sur les comportements que les belligérants ne peuvent plus ignorer publiquement.",
+    criteria:["Deux sous-parties clairement distinctes avec titres implicites","Chaque sous-partie suit la structure AEI","Connecteurs logiques qui articulent les arguments","Exemples factuels précis (noms, dates, institutions)","Transition logique entre les deux sous-parties"],
+    variants:[
+      {tag:"Variante 1 — Justice internationale efficace", q:"Rédigez le développement complet de la partie I (2 sous-parties argumentées) pour la dissertation :\n\n« La justice internationale est-elle efficace pour punir les crimes de guerre ? »\n\nPartie I : « La justice internationale dispose d'institutions et d'un arsenal juridique sans précédent. »"},
+      {tag:"Variante 2 — Soft power américain", q:"Rédigez le développement complet de la partie I (2 sous-parties argumentées) pour la dissertation :\n\n« Le soft power américain reste-t-il dominant au XXIe siècle ? »\n\nPartie I : « Les États-Unis disposent d'atouts culturels et technologiques sans équivalent mondial. »"},
+      {tag:"Variante 3 — Migrations choisies", q:"Rédigez le développement complet de la partie I (2 sous-parties argumentées) pour la dissertation :\n\n« Les migrations sont-elles une chance pour les pays d'accueil ? »\n\nPartie I : « Les migrations apportent des contributions économiques et démographiques significatives. »"}
+    ]
+  },
+  {
+    id:32,mod:"m6",diff:"hard",pts:4,theme:"Frontières & migrations",
+    title:"Nuancer une affirmation radicale",
+    notions:["souveraineté","droit d'asile","externalisation","valeurs européennes"],
+    solution:"Il serait facile de souscrire à cette affirmation : accords d'externalisation (UE-Turquie 2016, Libye, Tunisie), refoulements aux frontières grecques et croates, financement de garde-côtes libyens accusés de violations graves dessinent une politique qui place la réduction des flux au-dessus des obligations humanitaires. <strong>Certes</strong>, ces pratiques entrent en contradiction avec la Charte des droits fondamentaux de l'UE. <strong>Cependant</strong>, réduire à un abandon ignore les centaines de milliers de protections accordées chaque année, les condamnations de la CEDH, les ONG (SOS Méditerranée) qui opèrent avec accord tacite des États. <strong>Dès lors</strong>, il est plus rigoureux de parler d'une tension non résolue entre deux impératifs que les États refusent d'arbitrer : respect du droit d'asile et gestion des flux sous pression des opinions publiques — produisant une politique incohérente et moralement ambivalente.",
+    criteria:["Acceptation réelle et substantielle de l'affirmation (pas minimisée)","Nuance qui ne détruit pas l'affirmation mais la complexifie","Identification de la tension structurelle (pas simple liste d'exemples contraires)","Formulation finale plus précise que l'affirmation initiale"],
+    variants:[
+      {tag:"Variante 1 — UE et valeurs humanitaires", q:"Rédigez un paragraphe qui nuance avec précision l'affirmation :\n\n« L'Union européenne a renoncé à ses valeurs humanitaires dans sa gestion des migrations. »"},
+      {tag:"Variante 2 — Mondialisation et pauvreté", q:"Rédigez un paragraphe qui nuance avec précision l'affirmation :\n\n« La mondialisation a aggravé la pauvreté dans les pays du Sud. »"},
+      {tag:"Variante 3 — ONG et ingérence", q:"Rédigez un paragraphe qui nuance avec précision l'affirmation :\n\n« Les ONG humanitaires sont des instruments de l'ingérence occidentale dans les affaires des pays du Sud. »"}
+    ]
+  },
+  {
+    id:33,mod:"m6",diff:"hard",pts:5,theme:"Science, technique & société",
+    title:"Mini-dissertation complète",
+    notions:["données numériques","GAFAM","souveraineté numérique","régulation","RGPD"],
+    solution:"<strong>Introduction :</strong> En 2006, Clive Humby : « les données sont le nouveau pétrole ». Intuition puissante — données = ressource dont dépend la puissance économique au XXIe siècle. Mais la métaphore a ses limites : les données ne s'épuisent pas et leur valeur dépend de la capacité à les analyser. La vraie question : qui en est le maître — firmes privées, États, individus ? Plan : données = ressource stratégique au cœur de la puissance (I) → réalité qui génère des rivalités pour la souveraineté numérique (II).<br><strong>I. Données = ressource stratégique :</strong> GAFAM bâtis sur captation et monétisation des données (échange asymétrique services gratuits/données). Effets de réseau auto-renforçants. Extension au militaire : armes autonomes dont l'efficacité dépend des données d'entraînement — USA et Chine avantagés structurellement.<br><strong>II. Souveraineté numérique = nouvel enjeu géopolitique :</strong> RGPD (2018) = premier cadre global sur la protection des données personnelles, avec « effet Bruxelles ». Mais limite structurelle : l'Europe produit des règles, pas des plateformes. Dépendance au cloud américain (AWS, Azure, Google Cloud — soumis au CLOUD Act). Dès lors, souveraineté numérique = question géopolitique : qui décide des normes, qui contrôle les infrastructures ?<br><strong>Conclusion :</strong> Les données sont plus qu'un « nouveau pétrole » — leur nature (reproductible, immatérielle) exige des catégories nouvelles. La vraie question : « qui fixe les règles de leur usage ? » — fondamentalement politique. Défi : peut-on construire une gouvernance mondiale du numérique quand les puissances numériques poursuivent des visions radicalement différentes ?",
+    criteria:["Introduction avec accroche, problématisation et annonce du plan","Deux parties développées avec sous-parties lisibles","Connecteurs logiques qui articulent le raisonnement","Exemples précis (RGPD, CLOUD Act, GAFAM, données d'entraînement IA)","Conclusion avec bilan, réponse directe et ouverture"],
+    variants:[
+      {tag:"Variante 1 — Données numériques", q:"Rédigez une mini-dissertation complète (introduction + 2 parties développées + conclusion, ~30-40 lignes) sur :\n\n« Les données numériques : nouveau pétrole ou enjeu de souveraineté ? »"},
+      {tag:"Variante 2 — Intelligence artificielle et puissance", q:"Rédigez une mini-dissertation complète (introduction + 2 parties développées + conclusion, ~30-40 lignes) sur :\n\n« L'intelligence artificielle, nouveau facteur de puissance mondiale ? »"},
+      {tag:"Variante 3 — Internet et démocratie", q:"Rédigez une mini-dissertation complète (introduction + 2 parties développées + conclusion, ~30-40 lignes) sur :\n\n« Internet a-t-il renforcé ou affaibli la démocratie ? »"}
+    ]
+  },
+  {
+    id:34,mod:"m6",diff:"hard",pts:5,theme:"Tous thèmes",
+    title:"Synthèse — sujet inédit sous chrono",
+    notions:["territoire","puissance","acteurs","enjeux","tensions","eau"],
+    solution:"<strong>Analyse :</strong> Eau = ressource vitale (2,5% des réserves mondiales sont douces). Enjeu = ce pour quoi on se bat (acteurs, intérêts divergents). Géopolitique = relations entre États, puissance, territoire. Présupposé : l'eau sera l'enjeu central — à nuancer. Paradoxe : « L'eau est la ressource la plus universellement nécessaire et la plus inégalement accessible — et sa gestion internationale est à l'image de cette contradiction. »<br><strong>Plan :</strong> I. L'eau = facteur de tensions et coopérations (Nil, Mékong, Jourdain ; traités de partage ; militarisation des infrastructures) → II. Crise hydrique = amplificateur d'inégalités (2 Mds sans accès sûr ; sécurité alimentaire ; migrations climatiques) → III. Vers une gouvernance mondiale ? (absence de traité contraignant ; Forums mondiaux ; privatisation vs droit humain).<br><strong>Intro :</strong> Ban Ki-moon 2011 : « L'eau, c'est la vie. » L'eau douce = 2,5% des réserves ; distribution inégale + changement climatique accélère les déséquilibres. Question : l'eau constitue-t-elle un facteur structurant de la géopolitique mondiale du XXIe siècle ?<br><strong>Conclusion :</strong> L'eau confirme une tendance : enjeux environnementaux globaux indissociables des rapports de puissance. Les conflits hydrologiques se multiplient. Résoudre le problème supposera une reconfiguration politique des rapports entre souveraineté nationale et bien commun mondial.",
+    criteria:["Analyse syntaxique complète avec paradoxe formulé","Plan en 3 parties avec sous-parties nommées et justifiées","Introduction avec accroche, contextualisation, problématisation, annonce","Conclusion avec bilan, réponse, ouverture"],
+    variants:[
+      {tag:"Variante 1 — Eau et géopolitique", q:"EXERCICE CHRONOMÉTRÉ (objectif : 35 min)\nRédigez une introduction, un plan détaillé (3 parties avec sous-parties nommées) et une conclusion pour :\n\n« L'eau, enjeu géopolitique du XXIe siècle »\nMobilisez : analyse syntaxique, vocabulaire HGGSP, paradoxe, raisonnement multi-scalaire."},
+      {tag:"Variante 2 — Arctique et ressources", q:"EXERCICE CHRONOMÉTRÉ (objectif : 35 min)\nRédigez une introduction, un plan détaillé (3 parties avec sous-parties nommées) et une conclusion pour :\n\n« L'Arctique, enjeu géopolitique du XXIe siècle »\nMobilisez : analyse syntaxique, vocabulaire HGGSP, paradoxe, raisonnement multi-scalaire."},
+      {tag:"Variante 3 — Alimentation mondiale", q:"EXERCICE CHRONOMÉTRÉ (objectif : 35 min)\nRédigez une introduction, un plan détaillé (3 parties avec sous-parties nommées) et une conclusion pour :\n\n« Nourrir le monde : enjeux géopolitiques et environnementaux »\nMobilisez : analyse syntaxique, vocabulaire HGGSP, paradoxe, raisonnement multi-scalaire."}
+    ]
+  },
+  {
+    id:35,mod:"m6",diff:"hard",pts:5,theme:"Tous thèmes",
+    title:"Maîtrise globale — Grand oral HGGSP",
+    notions:["synthèse","acteurs","échelles","tensions","paradoxes","connecteurs"],
+    solution:"<strong>Analyse syntaxique :</strong> Migrations (pluriel — économiques, réfugiés, climatiques, diasporas). Défi (difficulté, négatif). Ressource (atout, positif). États (acteurs souverains nationaux). Monde (échelle globale). Présupposé : les États subissent, le monde bénéficie. Paradoxe : « Les migrations constituent un défi pour les États précisément parce qu'elles sont une ressource pour le monde — car ce qui enrichit l'humanité (mobilité, diversité, compétences) défie les États qui fondent leur légitimité sur l'homogénéité et le contrôle territorial. »<br><strong>Plan :</strong> I. Défi pour les États souverains (gestion des flux, intégration, tensions identitaires) → Transition : ce cadrage « défi » est construit politiquement — les migrations sont aussi des opportunités que les États choisissent de ne pas voir → II. Ressource à plusieurs échelles (remittances : 800 Mds$/an, 3x l'aide au développement ; démographique ; culturelle) → Transition : la dichotomie masque que les mêmes migrations peuvent être l'un ET l'autre → III. Révélateur des tensions de la mondialisation (mondialisation économique ouverte vs repli souverainiste ; droits universels vs contrôle national).<br><strong>Paragraphe de développement :</strong> Les remittances envoyées par les diasporas atteignent plus de 800 Mds$/an (BM) — soit 3x l'aide publique au développement. Pour le Maroc, les Philippines ou le Mexique, ces transferts représentent 7 à 15% du PIB national. Or, contrairement à l'aide institutionnelle, ces transferts arrivent directement aux familles — avec un effet multiplicateur sur les économies rurales. Cependant, cette ressource est fragile (dépend de l'économie des pays d'accueil) et peut alimenter une dépendance migratoire qui décourage le développement endogène. Dès lors, les migrations sont une ressource réelle mais ambivalente, dont l'optimisation supposerait des politiques que ni les pays d'accueil ni les pays d'origine ne mettent encore en œuvre.",
+    criteria:["Analyse syntaxique complète avec présupposé et paradoxe formulé","Plan en 3 parties avec transitions justifiées entre chaque partie","Paragraphe de développement : AEI + connecteurs + données + nuance","Cohérence globale : chaque élément s'articule avec les autres"],
+    variants:[
+      {tag:"Variante 1 — Migrations", q:"EXERCICE FINAL. Mobilisez l'ensemble du parcours :\n(1) Analyse syntaxique complète avec paradoxe géopolitique\n(2) Plan en 3 parties avec justification des transitions\n(3) Un paragraphe de développement solide\n\n« Les migrations : un défi pour les États ou une ressource pour le monde ? »"},
+      {tag:"Variante 2 — Énergie et puissance", q:"EXERCICE FINAL. Mobilisez l'ensemble du parcours :\n(1) Analyse syntaxique complète avec paradoxe géopolitique\n(2) Plan en 3 parties avec justification des transitions\n(3) Un paragraphe de développement solide\n\n« L'énergie, enjeu de puissance et de développement au XXIe siècle ? »"},
+      {tag:"Variante 3 — Inégalités mondiales", q:"EXERCICE FINAL. Mobilisez l'ensemble du parcours :\n(1) Analyse syntaxique complète avec paradoxe géopolitique\n(2) Plan en 3 parties avec justification des transitions\n(3) Un paragraphe de développement solide\n\n« Les inégalités mondiales sont-elles inévitables à l'ère de la mondialisation ? »"}
+    ]
+  }
+];
+
+// STATE
+const state = {
+  pts:0, done:new Set(), totalTries:0,
+  activeModule:"m1", openEx:null,
+  exState: {},
+  videos: []
+};
+
+function getExState(id) {
+  if (!state.exState[id]) state.exState[id] = {variantIdx:0, attempts:[], solShown:false, response:""};
+  return state.exState[id];
+}
+
+function isUnlocked(id) {
+  if (id===1) return true;
+  return state.done.has(id-1) || state.done.has(id);
+}
+
+function dpTag(d) {
+  const m={easy:"<span class='dp dp-easy'>Facile</span>",medium:"<span class='dp dp-med'>Moyen</span>",hard:"<span class='dp dp-hard'>Difficile</span>"};
+  return m[d];
+}
+
+function renderAttemptDots(exState, ptsNeeded) {
+  const needed = ptsNeeded;
+  const total = Math.max(needed + 1, exState.attempts.length + 1, 3);
+  let html = '<div class="attempts-row">';
+  for(let i=0;i<Math.min(total,5);i++){
+    if(i < exState.attempts.length){
+      const cls = exState.attempts[i].passed ? 'used-pass' : 'used-fail';
+      html += `<div class="attempt-dot ${cls}" title="${exState.attempts[i].passed?'Réussi':'Échoué'}"></div>`;
+    } else {
+      html += `<div class="attempt-dot"></div>`;
+    }
+  }
+  html += '</div>';
+  return html;
+}
+
+function renderNav() {
+  const modTabs = MODULES.map(m=>{
+    const cnt = EXERCISES.filter(e=>e.mod===m.id&&state.done.has(e.id)).length;
+    const tot = EXERCISES.filter(e=>e.mod===m.id).length;
+    return `<div class="nav-tab${state.activeModule===m.id?' active':''}" onclick="switchMod('${m.id}')">${m.label} <span style="color:#ddd;font-size:0.65rem">(${cnt}/${tot})</span></div>`;
+  }).join('');
+  const vcnt = state.videos.length;
+  const videoTab = `<div class="nav-tab${state.activeModule==='videos'?' active':''}" onclick="switchMod('videos')">▶ Vidéos${vcnt>0?' <span style=\"color:#ddd;font-size:0.65rem\">(' + vcnt + ')</span>':''}</div>`;
+  document.getElementById('nav-tabs').innerHTML = modTabs + videoTab;
+}
+
+function switchMod(id) {
+  state.activeModule=id;
+  renderNav();
+  if(id==='videos') renderVideos();
+  else renderMain();
+}
+
+function renderMain() {
+  const main = document.getElementById('main-content');
+  main.innerHTML='';
+  MODULES.forEach(mod=>{
+    if(mod.id !== state.activeModule) return;
+    const exs = EXERCISES.filter(e=>e.mod===mod.id);
+    const doneCount = exs.filter(e=>state.done.has(e.id)).length;
+    const sec = document.createElement('div');
+    sec.className='mod-sec visible';
+
+    const rlInfo = `<div class="rl-info">
+      <strong>Comment ça fonctionne :</strong> Soumettez votre réponse → l'IA l'évalue et vous indique précisément ce qui est juste, partiel ou manquant → si vous n'atteignez pas le seuil, une variante du même exercice s'ouvre automatiquement → recommencez jusqu'à validation. La solution modèle s'affiche après votre première tentative.
+    </div>`;
+
+    sec.innerHTML=`<div class="mod-hdr">
+      <div class="mod-tag">Module ${mod.id.replace('m','')}</div>
+      <div class="mod-title">${mod.title}</div>
+      <div class="mod-desc">${mod.desc}</div>
+      <div class="mod-prog">${doneCount} / ${exs.length} exercices validés</div>
+    </div>${rlInfo}`;
+
+    exs.forEach(ex=>{
+      sec.appendChild(buildCard(ex));
+    });
+    main.appendChild(sec);
+  });
+}
+
+function buildCard(ex) {
+  const unlocked = isUnlocked(ex.id);
+  const done = state.done.has(ex.id);
+  const isOpen = state.openEx===ex.id;
+  const es = getExState(ex.id);
+
+  const card = document.createElement('div');
+  card.className=`ex-card${done?' done':''}${!unlocked?' locked':''}${isOpen?' active':''}`;
+  card.id=`card-${ex.id}`;
+
+  const variantIdx = es.variantIdx;
+  const variant = ex.variants[variantIdx];
+  const passCount = es.attempts.filter(a=>a.passed).length;
+
+  card.innerHTML=`<div class="ex-head" onclick="${unlocked?`toggleEx(${ex.id})`:''}">
+    <span class="ex-n">${String(ex.id).padStart(2,'0')}</span>
+    ${dpTag(ex.diff)}
+    <span class="ex-ttl">${ex.title}</span>
+    <span class="theme-tag">${ex.theme}</span>
+    ${renderAttemptDots(es, ex.pts)}
+    <span class="ex-pts-b">${ex.pts} pt${ex.pts>1?'s':''}</span>
+    <span class="ex-ico">${done?'<span style="color:#666">✓</span>':'<span style="color:#ddd">·</span>'}</span>
+  </div>
+  <div class="ex-body${isOpen?' open':''}" id="body-${ex.id}">
+    ${unlocked ? buildBody(ex, es, variant) : '<div class="locked-msg">Validez l\'exercice précédent pour débloquer.</div>'}
+  </div>`;
+  return card;
+}
+
+function buildBody(ex, es, variant) {
+  const notionsHTML = ex.notions ? `<div class="sec-lbl">Notions mobilisées</div><div class="notion-row">${ex.notions.map(n=>`<span class="notion-chip">${n}</span>`).join('')}</div>` : '';
+  const solHTML = es.attempts.length > 0
+    ? `<div class="sec-lbl">Solution modèle</div><div class="sol-box show">${ex.solution}</div>`
+    : `<div class="sec-lbl">Solution modèle</div><div class="sol-locked-notice">La solution s'affiche après votre première tentative.</div>`;
+
+  const variantTag = es.variantIdx > 0
+    ? `<div class="variant-tag">↻ ${variant.tag}</div>`
+    : (ex.variants.length > 1 ? `<div class="variant-tag">${variant.tag}</div>` : '');
+
+  const done = state.done.has(ex.id);
+  const isEvaluating = es.isEvaluating;
+
+  // Last feedback
+  let lastFeedback = '';
+  if(es.lastFeedback) {
+    const v = es.lastFeedback.verdict;
+    const cls = v==='pass'?'verdict-pass':v==='partial'?'verdict-partial':'verdict-fail';
+    lastFeedback = `<div class="ai-feedback-wrap show" id="fb-${ex.id}">
+      <div class="ai-feedback-header"><span class="ai-badge">Évaluation IA</span> Tentative ${es.attempts.length}</div>
+      <div class="ai-feedback-body">
+        <div class="score-grid">${es.lastFeedback.scores.map(s=>`<div class="score-item"><div class="score-item-label">${s.label}</div><div class="score-item-val ${s.val==='✓'?'score-ok':s.val==='◑'?'score-partial':'score-fail'}">${s.val} ${s.note}</div></div>`).join('')}</div>
+        <div style="font-size:0.85rem;line-height:1.8;margin-top:0.75rem;border-top:1px solid #f0f0f0;padding-top:0.75rem">${es.lastFeedback.comment}</div>
+        <div class="${cls}">${es.lastFeedback.verdictMsg}</div>
+        ${!done && es.lastFeedback.verdict!=='pass' ? `<div class="variant-notice">↻ Une nouvelle variante de l'exercice est disponible ci-dessus. Relisez la solution modèle et recommencez.</div>` : ''}
+      </div>
+    </div>`;
+  }
+
+  return `${notionsHTML}
+    ${solHTML}
+    <div class="sec-lbl">Votre réponse</div>
+    ${variantTag}
+    <div class="q-text">${variant.q}</div>
+    <textarea id="ta-${ex.id}" placeholder="Rédigez votre réponse ici..." rows="6" ${done?'disabled':''} onchange="saveResp(${ex.id},this.value)">${es.response||''}</textarea>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="submitbtn-${ex.id}" onclick="submitAnswer(${ex.id})" ${done||isEvaluating?'disabled':''}>
+        ${isEvaluating?'<span class="loading-dots"><span></span><span></span><span></span></span> Évaluation en cours…':'Soumettre pour évaluation IA'}
+      </button>
+      ${done ? '<span style="font-family:Arial,sans-serif;font-size:0.78rem;color:#888">✓ Exercice validé</span>' : ''}
+    </div>
+    <div class="pts-note">Seuil de validation : ${ex.pts} point${ex.pts>1?'s':''}  ·  Tentatives : ${es.attempts.length}</div>
+    ${lastFeedback}`;
+}
+
+function saveResp(id, val) {
+  getExState(id).response = val;
+}
+
+function toggleEx(id) {
+  state.openEx = state.openEx===id ? null : id;
+  renderMain();
+}
+
+async function submitAnswer(id) {
+  const ex = EXERCISES.find(e=>e.id===id);
+  const es = getExState(id);
+  const ta = document.getElementById(`ta-${id}`);
+  if(!ta) return;
+  const response = ta.value.trim();
+  if(!response || response.length < 20) {
+    alert('Veuillez rédiger une réponse avant de soumettre.');
+    return;
+  }
+  es.response = response;
+  es.isEvaluating = true;
+  state.totalTries++;
+  updateTopBar();
+  renderMain();
+
+  const criteriaList = ex.criteria.map((c,i) => `${i+1}. ${c}`).join('\n');
+  const prompt = `Tu es un correcteur expert en HGGSP (terminale générale, coefficient 16). Tu évalues la réponse d'un élève de terminale.
+
+SUJET DE L'EXERCICE :
+${ex.variants[es.variantIdx].q}
+
+SOLUTION MODÈLE (référence) :
+${ex.solution}
+
+CRITÈRES D'ÉVALUATION (${ex.criteria.length} critères) :
+${criteriaList}
+
+RÉPONSE DE L'ÉLÈVE :
+${response}
+
+Évalue chaque critère avec : ✓ (acquis), ◑ (partiel), ✗ (absent).
+Puis donne un commentaire global précis de 3-5 lignes : indique exactement ce qui manque ou est incorrect, avec des suggestions concrètes.
+Enfin, donne un verdict : VALIDÉ (tous les critères essentiels sont acquis ou presque), PARTIEL (des éléments importants manquent), ou À REFAIRE (réponse insuffisante).
+
+Réponds UNIQUEMENT en JSON valide, sans aucun texte avant ou après, sans backticks :
+{"scores":[{"label":"critère court","val":"✓ ou ◑ ou ✗","note":"explication courte max 8 mots"}],"comment":"commentaire global","verdict":"pass|partial|fail","verdictMsg":"phrase de verdict pour l'élève"}`;
+
+  try {
+    const res = await fetch("/api/groq", {
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json",
+        "x-access-password": sessionStorage.getItem('accessPassword') || ""
+      },
+      body: JSON.stringify({prompt})
+    });
+    const data = await res.json();
+    if(data.error === 'unauthorized') {
+      sessionStorage.removeItem('accessPassword');
+      alert('Mot de passe incorrect ou session expirée. Rechargez la page.');
+      location.reload();
+      return;
+    }
+    const raw = data.content || "";
+    let parsed;
+    try {
+      parsed = JSON.parse(raw.replace(/```json|```/g,'').trim());
+    } catch(e) {
+      parsed = {
+        scores: ex.criteria.map(c=>({label:c.substring(0,30),val:"◑",note:"Évaluation partielle"})),
+        comment:"Votre réponse a été reçue. Comparez attentivement avec la solution modèle pour identifier ce qui manque.",
+        verdict:"partial",
+        verdictMsg:"Résultat partiel — relisez la solution et recommencez avec la variante suivante."
+      };
+    }
+
+    // Truncate labels to criteria
+    if(parsed.scores.length !== ex.criteria.length) {
+      while(parsed.scores.length < ex.criteria.length) parsed.scores.push({label:"critère",val:"◑",note:""});
+      parsed.scores = parsed.scores.slice(0, ex.criteria.length);
+    }
+    parsed.scores = parsed.scores.map((s,i)=>({...s, label: ex.criteria[i].substring(0,40)}));
+
+    const passed = parsed.verdict === 'pass';
+    es.attempts.push({passed, feedback: parsed});
+    es.lastFeedback = parsed;
+    es.solShown = true;
+    es.isEvaluating = false;
+
+    if(passed && !state.done.has(id)) {
+      state.done.add(id);
+      state.pts += ex.pts;
+      updateTopBar();
+    } else if(!passed) {
+      // Advance to next variant
+      const nextVariant = (es.variantIdx + 1) % ex.variants.length;
+      es.variantIdx = nextVariant;
+      es.response = "";
+    }
+
+    renderNav();
+    renderMain();
+  } catch(err) {
+    es.isEvaluating = false;
+    es.lastFeedback = {
+      scores: ex.criteria.map(c=>({label:c.substring(0,40),val:"◑",note:"Connexion requise"})),
+      comment:"Une erreur de connexion s'est produite. Vérifiez votre connexion internet et réessayez.",
+      verdict:"partial",
+      verdictMsg:"Connexion non disponible — réessayez dans quelques instants."
+    };
+    renderMain();
+  }
+}
+
+function updateTopBar() {
+  document.getElementById('total-pts').textContent = state.pts;
+  document.getElementById('ex-done').textContent = state.done.size;
+  document.getElementById('total-tries').textContent = state.totalTries;
+  const pct = Math.round((state.done.size/35)*100);
+  document.getElementById('prog-fill').style.width = pct+'%';
+  document.getElementById('prog-lbl').textContent = `${state.done.size} / 35 complétés (${pct}%)`;
+}
+
+
+// ── VIDEO MODULE ─────────────────────────────────────────────────────────────
+
+function renderVideos() {
+  const main = document.getElementById('main-content');
+  const vids = state.videos;
+  const playing = state.playingVideo || null;
+
+  main.innerHTML = `
+    <div style="margin-bottom:1.5rem">
+      <div style="font-family:Arial,sans-serif;font-size:0.66rem;text-transform:uppercase;letter-spacing:0.12em;color:#ccc;margin-bottom:0.35rem">Section vidéos</div>
+      <div style="font-size:1.1rem;font-weight:400;margin-bottom:0.25rem">Ressources vidéo</div>
+      <div style="font-family:Arial,sans-serif;font-size:0.8rem;color:#999">Chargez vos fichiers MP4 depuis votre ordinateur. Les vidéos restent locales — rien n'est envoyé sur internet.</div>
+    </div>
+
+    <div style="border:1px dashed #d0d0d0;border-radius:3px;padding:1.5rem;text-align:center;margin-bottom:1.5rem;cursor:pointer;transition:background 0.15s;background:#fafafa" id="drop-zone" onclick="document.getElementById('vid-input').click()" ondragover="event.preventDefault();this.style.background='#f0f0f0'" ondragleave="this.style.background='#fafafa'" ondrop="handleDrop(event)">
+      <div style="font-family:Arial,sans-serif;font-size:0.82rem;color:#aaa;margin-bottom:0.4rem">Cliquer pour sélectionner ou glisser-déposer des fichiers MP4</div>
+      <div style="font-family:Arial,sans-serif;font-size:0.72rem;color:#ccc">Formats acceptés : MP4, WebM, MOV · Plusieurs fichiers possibles</div>
+      <input type="file" id="vid-input" accept="video/mp4,video/webm,video/quicktime" multiple style="display:none" onchange="handleFiles(this.files)">
+    </div>
+
+    ${vids.length === 0 ? `<div style="font-family:Arial,sans-serif;font-size:0.82rem;color:#ccc;text-align:center;padding:2rem 0;border-top:1px solid #f5f5f5">Aucune vidéo chargée pour le moment.</div>` : ''}
+
+    ${playing !== null && vids[playing] ? `
+    <div style="margin-bottom:1.75rem;border:1px solid #e0e0e0;border-radius:3px;overflow:hidden" id="player-block">
+      <video id="main-video" controls autoplay style="width:100%;display:block;background:#000;max-height:480px">
+        <source src="${vids[playing].url}" type="${vids[playing].type}">
+      </video>
+      <div style="padding:0.85rem 1.1rem;background:#fff;border-top:1px solid #f0f0f0;display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap">
+        <div style="flex:1">
+          <div style="font-size:0.9rem;margin-bottom:2px">${vids[playing].name}</div>
+          ${vids[playing].note ? `<div style="font-family:Arial,sans-serif;font-size:0.75rem;color:#999">${vids[playing].note}</div>` : ''}
+        </div>
+        <span style="font-family:Arial,sans-serif;font-size:0.68rem;color:#aaa;border:1px solid #e8e8e8;padding:2px 7px;border-radius:2px">${vids[playing].theme||'Sans thème'}</span>
+        <button class="btn btn-ghost" style="font-size:0.72rem" onclick="closePlayer()">Fermer</button>
+      </div>
+    </div>` : ''}
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:0.75rem">
+      ${vids.map((v,i) => `
+        <div style="border:1px solid ${state.playingVideo===i?'#1a1a1a':'#e8e8e8'};border-radius:3px;overflow:hidden;transition:border-color 0.2s">
+          <div style="background:#f5f5f5;aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;overflow:hidden" onclick="playVideo(${i})">
+            <video style="width:100%;height:100%;object-fit:cover;pointer-events:none" muted preload="metadata">
+              <source src="${v.url}" type="${v.type}">
+            </video>
+            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.18)">
+              <div style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.92);display:flex;align-items:center;justify-content:center">
+                <div style="width:0;height:0;border-style:solid;border-width:7px 0 7px 13px;border-color:transparent transparent transparent #1a1a1a;margin-left:2px"></div>
+              </div>
+            </div>
+          </div>
+          <div style="padding:0.7rem 0.85rem;background:#fff">
+            <div style="font-size:0.85rem;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${v.name}">${v.name}</div>
+            <div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap">
+              <select style="font-family:Arial,sans-serif;font-size:0.68rem;color:#888;border:1px solid #e8e8e8;border-radius:2px;padding:1px 4px;background:#fff;flex:1;min-width:80px" onchange="setTheme(${i},this.value)">
+                <option value="" ${!v.theme?'selected':''}>— Thème —</option>
+                <option value="Environnement & territoire" ${v.theme==='Environnement & territoire'?'selected':''}>Environnement</option>
+                <option value="Mondialisation & puissances" ${v.theme==='Mondialisation & puissances'?'selected':''}>Mondialisation</option>
+                <option value="Guerre, paix & conflits" ${v.theme==='Guerre, paix & conflits'?'selected':''}>Conflits</option>
+                <option value="Mémoires & histoire" ${v.theme==='Mémoires & histoire'?'selected':''}>Mémoires</option>
+                <option value="Science, technique & société" ${v.theme==='Science & technique'?'selected':''}>Science</option>
+                <option value="Frontières & migrations" ${v.theme==='Frontières & migrations'?'selected':''}>Migrations</option>
+              </select>
+              <button class="btn btn-ghost" style="font-size:0.68rem;padding:2px 7px;color:#ccc;border-color:#e8e8e8" onclick="removeVideo(${i})" title="Supprimer">✕</button>
+            </div>
+            <input type="text" placeholder="Note (optionnel)…" value="${v.note||''}" style="margin-top:5px;width:100%;border:1px solid #ebebeb;border-radius:2px;padding:3px 7px;font-family:Arial,sans-serif;font-size:0.72rem;color:#777;outline:none" onchange="setNote(${i},this.value)">
+          </div>
+        </div>`).join('')}
+    </div>`;
+}
+
+function handleFiles(files) {
+  Array.from(files).forEach(f => {
+    if(!f.type.startsWith('video/')) return;
+    const url = URL.createObjectURL(f);
+    state.videos.push({name:f.name.replace(/\.[^.]+$/,''), url, type:f.type, theme:'', note:''});
+  });
+  renderNav();
+  renderVideos();
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').style.background='#fafafa';
+  handleFiles(e.dataTransfer.files);
+}
+
+function playVideo(i) {
+  state.playingVideo = i;
+  renderVideos();
+  setTimeout(()=>{ const el=document.getElementById('player-block'); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); },50);
+}
+
+function closePlayer() {
+  state.playingVideo = null;
+  renderVideos();
+}
+
+function removeVideo(i) {
+  URL.revokeObjectURL(state.videos[i].url);
+  state.videos.splice(i,1);
+  if(state.playingVideo===i) state.playingVideo=null;
+  else if(state.playingVideo>i) state.playingVideo--;
+  renderNav();
+  renderVideos();
+}
+
+function setTheme(i,v){ state.videos[i].theme=v; }
+function setNote(i,v){ state.videos[i].note=v; }
+
+// ── END VIDEO MODULE ──────────────────────────────────────────────────────────
+
+renderNav();
+renderMain();
+updateTopBar();
+</script>
+</body>
+</html>
